@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Отчет по занятию</h2>
+<p><strong>Студент:</strong> {{ lesson.student.full_name }}</p>
+<p><strong>Время занятия:</strong> {{ lesson.date_time.strftime('%d.%m.%Y %H:%M') }}</p>
+
+<form method="POST">
+    <div class="mb-3">
+        <label for="attendance" class="form-label">Студент присутствовал?</label>
+        <select class="form-select" id="attendance" name="attendance" required>
+            <option value="present" {% if lesson.status == 'completed' or (not lesson.topic and not lesson.video_link and lesson.status != 'student_absent') %}selected{% endif %}>Да, присутствовал</option>
+            <option value="absent" {% if lesson.status == 'student_absent' %}selected{% endif %}>Нет, отсутствовал</option>
+        </select>
+    </div>
+
+    <div id="report_details">
+        <div class="mb-3">
+            <label for="topic" class="form-label">Тема занятия:</label>
+            <textarea class="form-control" id="topic" name="topic" rows="3">{{ lesson.topic or '' }}</textarea>
+        </div>
+
+        <div class="mb-3">
+            <label for="video_link" class="form-label">Ссылка на видеозапись (необязательно):</label>
+            <input type="url" class="form-control" id="video_link" name="video_link" value="{{ lesson.video_link or '' }}">
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label for="next_lesson_date_time" class="form-label">Дата и время следующего урока (необязательно):</label>
+        <input type="datetime-local" class="form-control" id="next_lesson_date_time" name="next_lesson_date_time">
+    </div>
+    
+    <button type="submit" class="btn btn-primary">Сохранить отчет</button>
+    <a href="{{ url_for('today_lessons') }}" class="btn btn-secondary">Назад к расписанию</a>
+</form>
+
+<script>
+    // Optional: Show/hide topic and video link based on attendance
+    const attendanceSelect = document.getElementById('attendance');
+    const reportDetailsDiv = document.getElementById('report_details');
+
+    function toggleReportDetails() {
+        if (attendanceSelect.value === 'absent') {
+            reportDetailsDiv.style.display = 'none';
+        } else {
+            reportDetailsDiv.style.display = 'block';
+        }
+    }
+    attendanceSelect.addEventListener('change', toggleReportDetails);
+    // Initial call
+    toggleReportDetails();
+</script>
+
+{% endblock %}

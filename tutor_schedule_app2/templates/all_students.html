@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2 class="mt-4">Список студентов</h2>
+<div class="row mb-3">
+    <div class="col-md-6">
+        <a href="{{ url_for('add_student') }}" class="btn btn-primary">Добавить студента</a>
+    </div>
+    <div class="col-md-6">
+        <form class="d-flex" action="{{ url_for('all_students') }}" method="GET">
+            <input class="form-control me-2" type="search" placeholder="Поиск по ФИО или Telegram ID" aria-label="Search" name="search" value="{{ search_query }}">
+            <button class="btn btn-outline-success" type="submit">Поиск</button>
+        </form>
+    </div>
+</div>
+
+{% if students %}
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>ФИО</th>
+                <th>Telegram ID</th>
+                <th>Всего занятий</th>
+                <th>Уведомления</th>
+                <th>Действия</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for student in students %}
+            <tr>
+                <td>{{ student.full_name }}</td>
+                <td>{{ student.telegram_id or 'Не указан' }}</td>
+                <td>{{ student.lessons_count }}</td>
+                <td>
+                    {% if student.receive_notifications %}
+                        <span class="badge bg-success">Вкл.</span>
+                    {% else %}
+                        <span class="badge bg-danger">Выкл.</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{{ url_for('view_student_card', student_id=student.id) }}" class="btn btn-info btn-sm">Карточка</a>
+                    <a href="{{ url_for('delete_student', student_id=student.id) }}" class="btn btn-danger btn-sm" onclick="return confirm('Вы уверены, что хотите удалить этого студента и все связанные данные?')">Удалить</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>Студентов не найдено.</p>
+{% endif %}
+{% endblock %}

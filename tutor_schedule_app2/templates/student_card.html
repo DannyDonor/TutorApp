@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card mt-4">
+    <div class="card-header">
+        <h2 class="card-title">Карточка студента: {{ student.full_name }}</h2>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>Полное имя:</strong> {{ student.full_name }}</p>
+                <p><strong>Telegram ID:</strong> {{ student.telegram_id or 'Не указан' }}</p>
+                <p><strong>Всего занятий (в базе):</strong> {{ student.lessons|length }}</p>
+                {% set scheduled_lessons = student.lessons|selectattr('status', 'equalto', 'scheduled')|list %}
+                <p><strong>Запланировано занятий:</strong> {{ scheduled_lessons|length }}</p>
+
+                <p>
+                    <strong>Количество всех занятий (для учета):</strong>
+                    <span id="lessonsCountDisplay">{{ student.lessons_count }}</span>
+                    <button class="btn btn-sm btn-outline-secondary ms-2" type="button" data-bs-toggle="collapse" data-bs-target="#editLessonsCountForm" aria-expanded="false" aria-controls="editLessonsCountForm">
+                        Изменить
+                    </button>
+                </p>
+                <div class="collapse" id="editLessonsCountForm">
+                    <form action="{{ url_for('edit_student_lessons_count', student_id=student.id) }}" method="POST" class="mt-2">
+                        <div class="input-group input-group-sm mb-3">
+                            <input type="number" name="lessons_count" class="form-control" value="{{ student.lessons_count }}" required>
+                            <button class="btn btn-primary" type="submit">Сохранить</button>
+                        </div>
+                    </form>
+                </div>
+
+                <p>
+                    <strong>Уведомления:</strong>
+                    {% if student.receive_notifications %}
+                        <span class="badge bg-success">Включены</span>
+                    {% else %}
+                        <span class="badge bg-danger">Отключены</span>
+                    {% endif %}
+                    <form action="{{ url_for('toggle_student_notifications', student_id=student.id) }}" method="POST" class="d-inline ms-2">
+                        <button type="submit" class="btn btn-sm {% if student.receive_notifications %}btn-warning{% else %}btn-success{% endif %}">
+                            {% if student.receive_notifications %}Отключить{% else %}Включить{% endif %}
+                        </button>
+                    </form>
+                </p>
+            </div>
+            <div class="col-md-6">
+                <h4>Родители:</h4>
+                {% if parents %}
+                    <ul class="list-group mb-3">
+                        {% for parent in parents %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Telegram ID: {{ parent.telegram_id }}
+                                <a href="{{ url_for('delete_parent', student_id=student.id, parent_id=parent.id) }}" class="btn btn-danger btn-sm" onclick="return confirm('Удалить этого родителя?')">Удалить</a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>Родители не добавлены.</p>
+                {% endif %}
+                <a href="{{ url_for('add_parent', student_id=student.id) }}" class="btn btn-sm btn-outline-primary">Добавить родителя</a>
+            </div>
+        </div>
+
+        <h4 class="mt-4">
+            Платежи:
+            <button class="btn btn-sm btn-outline-secondary ms-2" type="button" data-bs-toggle="collapse" data-bs-target="#paymentsCollapse" aria-expanded="false" aria-controls="paymentsCollapse">
+                Свернуть/Развернуть
+            </button>
+            <a href="{{ url_for('add_payment', student_id=student.id) }}" class="btn btn-sm btn-outline-success mb-3">Добавить платеж</a>
+        </h4>
+        <div class="collapse show" id="paymentsCollapse"> {# 'show' делает панель развернутой по умолчанию #}
+            {% if payments %}
+                <table class="table table-striped table-sm">
+                    <thead>
+                        <tr>
+                            <th>Сумма</th>
+                            <th>Дата платежа</th>
+                            <th>Описание</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in payments %}
+                        <tr>
+                            <td>{{ "%.2f"|format(payment.amount) }}</td>
+                            <td>{{ payment.payment_date.strftime('%d.%m.%Y %H:%M') }}</td>
+                            <td>{{ payment.description or 'Без описания' }}</td>
+                            <td>
+                                <a href="{{ url_for('delete_payment', payment_id=payment.id) }}" class="btn btn-danger btn-sm" onclick="return confirm('Удалить этот платеж?')">Удалить</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>Платежей нет.</p>
+            {% endif %}
+        </div>
+
+        <h4 class="mt-4">Занятия студента:</h4>
+        <table class="table table-striped table-sm">
+            <thead>
+                <tr>
+                    <th>Дата и время</th>
+                    <th>Статус</th>
+                    <th>Тема</th>
+                    <th>Отчет</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lesson in lessons %}
+                <tr>
+                    <td>{{ lesson.date_time.strftime('%d.%m.%Y %H:%M') }}</td>
+                    <td>{{ lesson.status }}</td>
+                    <td>{{ lesson.topic_covered or 'Не указана' }}</td>
+                    <td>{{ lesson.report_status or 'Нет' }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4">Занятий нет.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <h4 class="mt-4">Домашние задания:</h4>
+        <table class="table table-striped table-sm">
+            <thead>
+                <tr>
+                    <th>Описание</th>
+                    <th>Дата занятия</th>
+                    <th>Выполнено</th>
+                    <th>Дата выполнения</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for hw in homeworks %}
+                <tr>
+                    <td>{{ hw.description }}</td>
+                    <td>{{ hw.lesson.date_time.strftime('%d.%m.%Y %H:%M') if hw.lesson else 'N/A' }}</td>
+                    <td>
+                        {% if hw.is_completed %}
+                            <span class="badge bg-success">Да</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">Нет</span>
+                            <a href="{{ url_for('mark_homework_completed_web', homework_id=hw.id) }}" class="btn btn-sm btn-success ms-2">Отметить как выполненное</a>
+                        {% endif %}
+                    </td>
+                    <td>{{ hw.completed_date.strftime('%d.%m.%Y %H:%M') if hw.completed_date else 'Не выполнено' }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4">Домашних заданий нет.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <a href="{{ url_for('all_students') }}" class="btn btn-secondary mt-3">Назад к списку студентов</a>
+    </div>
+</div>
+{% endblock %}

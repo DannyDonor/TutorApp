@@ -1,0 +1,14 @@
+<h2>Занятия студента: {{ student.full_name }}</h2>
+<a href="/">Назад</a><br><br>
+<a href="{{ url_for('add_parent', student_id=student.id) }}" class="btn btn-primary mb-3">Добавить родителя</a> {# New #}
+<ul>
+{% for l in lessons %}
+  <li>{{ l.date_time }} — {{ l.status }}
+    {% if l.status != 'cancelled' %}
+      [<a href="/cancel_lesson/{{ l.id }}">отменить</a>]
+    {% endif %}
+  </li>
+{% else %}
+  <li>Занятий нет.</li>
+{% endfor %}
+</ul>

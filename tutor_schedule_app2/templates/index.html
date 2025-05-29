@@ -1,0 +1,37 @@
+<!--{% extends "base.html" %}-->
+
+<!--{% block content %}-->
+<!--<h2>Студенты</h2>-->
+<!--<a href="/add_student" class="btn btn-primary mb-3">Добавить студента</a>-->
+<!--<a href="/today" class="btn btn-info mb-3">Сегодняшние занятия</a>-->
+<!--{% endblock %}-->
+<!--<ul>-->
+<!--{% for s in students %}-->
+<!--  <li>{{ s.full_name }} ({{ s.telegram_id }}) — {{ s.lessons_count }} занятий-->
+<!--    [<a href="/delete_student/{{ s.id }}">удалить</a>]-->
+<!--    [<a href="/student/{{ s.id }}">занятия</a>]-->
+<!--  </li>-->
+<!--{% endfor %}-->
+<!--</ul>-->
+
+<!--<h2>Все занятия</h2>-->
+<!--<a href="/add_lesson">Добавить занятие</a>-->
+<!--<ul>-->
+<!--{% for l in lessons %}-->
+<!--  <li>-->
+<!--    {{ l.student.full_name }} — {{ l.date_time }} — {{ l.status }}-->
+<!--    {% if l.status != 'cancelled' %}-->
+<!--      [<a href="/cancel_lesson/{{ l.id }}">отменить</a>]-->
+<!--    {% endif %}-->
+<!--  </li>-->
+<!--{% endfor %}-->
+<!--</ul>-->
+
+{% extends "base.html" %}
+
+{% block content %}
+<script>
+    window.location.href = "{{ url_for('today_lessons') }}";
+</script>
+<p>Перенаправление на страницу сегодняшних занятий...</p>
+{% endblock %}
