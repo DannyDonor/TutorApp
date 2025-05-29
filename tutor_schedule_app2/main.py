@@ -9,6 +9,7 @@ import time # <--- НОВЫЙ ИМПОРТ: добавляем import time
 from contextlib import contextmanager
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import or_ # Для поиска
+from sqlalchemy import func
 
 app = Flask(__name__)
 app.secret_key = 'secret_key'
@@ -244,87 +245,119 @@ def today_lessons():
 
         return render_template('today_lessons.html', lessons=lessons, today=today.strftime('%d.%m.%Y'))
 
+
 @app.route('/edit_lesson/<int:lesson_id>', methods=['GET', 'POST'])
 def edit_lesson(lesson_id):
     with session_scope() as session:
         lesson = session.query(Lesson).get(lesson_id)
-        student = session.query(Student).get(lesson.student_id)
+        if not lesson:
+            return redirect('/today')
 
-        if not lesson or not student:
-            return "Занятие или студент не найдены", 404
+        student = lesson.student
+        current_time = lesson.date_time.strftime('%Y-%m-%dT%H:%M')
+
+        # Инициализация homework до любых условных блоков, чтобы она всегда существовала
+        homework = session.query(Homework).filter_by(lesson_id=lesson.id).first()
 
         if request.method == 'POST':
-            try:
-                new_datetime_str = request.form.get('date_time')
-                if new_datetime_str:
-                    lesson.date_time = datetime.strptime(new_datetime_str, "%Y-%m-%dT%H:%M")
+            new_date_time_str = request.form['date_time']
+            new_date_time = datetime.strptime(new_date_time_str, '%Y-%m-%dT%H:%M')
+            report_status = request.form['report_status']
+            topic_covered = request.form['topic_covered']
+            video_link = request.form['video_link']
+            homework_description = request.form['homework_description']
+            next_lesson_date_str = request.form.get('next_lesson_date')
 
-                report_status = request.form.get('report_status')
-                lesson.report_status = report_status
-                lesson.status = report_status
+            old_status = lesson.status
+            lesson.date_time = new_date_time
+            lesson.status = report_status
+            lesson.topic = topic_covered
+            lesson.video_link = video_link
 
-                lesson.topic_covered = request.form.get('topic_covered')
-                lesson.video_link = request.form.get('video_link')
-                homework_description = request.form.get('homework_description')
-
-                next_lesson_date_str = request.form.get('next_lesson_date')
-                if next_lesson_date_str:
-                    lesson.next_lesson_date = datetime.strptime(next_lesson_date_str, "%Y-%m-%dT%H:%M")
+            # Update lessons_count based on status change
+            if old_status == 'scheduled' and report_status in ['cancelled', 'no_show']:
+                # If lesson was scheduled and now is cancelled or no_show, increment student's lessons_count back
+                student.lessons_count += 1
+                send_notification(config.TUTOR_ID, f"❕ Количество занятий у студента {student.full_name} увеличено на 1 (урок {old_status} -> {report_status}). Текущий баланс: {student.lessons_count}")
+            elif old_status in ['cancelled', 'no_show'] and report_status == 'scheduled':
+                # If lesson was cancelled/no_show and now is scheduled, decrement student's lessons_count
+                if student.lessons_count > 0:
+                    student.lessons_count -= 1
+                    send_notification(config.TUTOR_ID, f"❕ Количество занятий у студента {student.full_name} уменьшено на 1 (урок {old_status} -> {report_status}). Текущий баланс: {student.lessons_count}")
                 else:
-                    lesson.next_lesson_date = None
+                    # Prevent negative lesson count, revert status or inform tutor
+                    lesson.status = old_status # Revert status if no lessons available
+                    send_notification(config.TUTOR_ID, f"⚠️ Невозможно запланировать урок для {student.full_name}. Недостаточно занятий на балансе.")
 
-                if report_status == 'completed' and lesson.next_lesson_date:
-                    new_lesson = Lesson(
-                        student_id=lesson.student_id,
-                        date_time=lesson.next_lesson_date,
-                        status='scheduled'
+            # Handle homework
+            if homework_description:
+                # homework уже инициализирован выше
+                if homework:
+                    homework.description = homework_description
+                else:
+                    new_homework = Homework(
+                        lesson_id=lesson.id,
+                        student_id=student.id,
+                        description=homework_description
                     )
+                    session.add(new_homework)
+                    homework = new_homework # Ensure 'homework' refers to the new object for potential later use if needed
+                if student.telegram_id:
+                    send_notification(student.telegram_id, f"📝 Новое домашнее задание по уроку {lesson.date_time.strftime('%d.%m.%Y %H:%M')}: {homework_description}")
+            else:
+                # If homework_description is empty, delete existing homework for this lesson
+                if homework: # Проверяем, существует ли homework перед удалением
+                    session.delete(homework)
+                    homework = None # Устанавливаем homework в None после удаления
+
+            # Handle next lesson creation
+            if next_lesson_date_str:
+                next_lesson_date_time = datetime.strptime(next_lesson_date_str, '%Y-%m-%dT%H:%M')
+                if student.lessons_count > 0:
+                    new_lesson = Lesson(student_id=student.id, date_time=next_lesson_date_time, status='scheduled')
                     session.add(new_lesson)
-                    if student.receive_notifications:
-                        send_notification(student.telegram_id, f"Новое занятие запланировано на: {new_lesson.date_time.strftime('%d.%m.%Y %H:%M')}")
-                        for parent in student.parents:
-                            send_notification(parent.telegram_id, f"Новое занятие для {student.full_name} запланировано на: {new_lesson.date_time.strftime('%d.%m.%Y %H:%M')}")
+                    student.lessons_count -= 1
+                    send_notification(config.TUTOR_ID, f"📆 Для студента {student.full_name} запланировано следующее занятие на {next_lesson_date_time.strftime('%d.%m.%Y %H:%M')}. Оставшийся баланс занятий: {student.lessons_count}")
+                else:
+                    send_notification(config.TUTOR_ID, f"⚠️ Недостаточно занятий на балансе у студента {student.full_name} для автоматического создания следующего урока.")
 
+            session.add(lesson) # Сохраняем изменения в уроке
+            session.add(student) # Сохраняем изменения в студенте
 
-                if report_status == 'completed' and homework_description:
-                    existing_homework = session.query(Homework).filter_by(lesson_id=lesson.id).first()
-                    if existing_homework:
-                        existing_homework.description = homework_description
-                        existing_homework.is_completed = False
-                        existing_homework.completed_date = None
-                    else:
-                        homework = Homework(
-                            lesson_id=lesson.id,
-                            student_id=student.id,
-                            description=homework_description
-                        )
-                        session.add(homework)
-                elif report_status != 'completed' and lesson.homework:
-                    session.delete(lesson.homework)
+            return redirect('/today')
 
-                send_lesson_report(lesson, student, report_status, homework_description)
+        # Retrieve homework for the lesson if it exists
+        # Эта строка была здесь, но я перенес ее выше для гарантированной инициализации
+        # homework = session.query(Homework).filter_by(lesson_id=lesson.id).first()
+        lesson.homework = homework # Attach homework object to lesson for easy access in template
 
-                return redirect(url_for('today_lessons'))
-            except ValueError:
-                return "Неверный формат даты/времени", 400
+        return render_template('edit_lesson.html', lesson=lesson, student=student, current_time=current_time)
 
-        return render_template('edit_lesson.html',
-                               lesson=lesson,
-                               student=student,
-                               current_time=lesson.date_time.strftime('%Y-%m-%dT%H:%M'))
+@app.route('/cancel_lesson_web/<int:lesson_id>') # <--- ИЗМЕНЕНО: название маршрута
+def cancel_lesson_web(lesson_id): # <--- ИЗМЕНЕНО: название функции
+    next_url = request.args.get('next') # <--- НОВОЕ: Получаем параметр 'next' из URL
+    if not next_url: # Если next параметр не передан, устанавливаем дефолтный URL
+        # Выберите дефолтный URL, который вам больше подходит.
+        # Например, 'all_lessons' или 'today_lessons'
+        next_url = url_for('all_lessons') # <--- ВАЖНО: Дефолтное перенаправление
 
-
-@app.route('/cancel_lesson_web/<int:lesson_id>')
-def cancel_lesson_web(lesson_id):
     with session_scope() as session:
         lesson = session.query(Lesson).get(lesson_id)
-        student = session.query(Student).get(lesson.student_id)
-        lesson.status = 'cancelled'
-        lesson.report_status = 'cancelled'
-        if lesson.homework:
-            session.delete(lesson.homework)
-        send_lesson_report(lesson, student, 'cancelled')
-        return redirect(url_for('today_lessons'))
+        if lesson:
+            student = lesson.student
+            # Логика отмены (статус, баланс, уведомления) остается без изменений
+            if lesson.status == 'scheduled' or lesson.status == 'completed':
+                lesson.status = 'cancelled'
+                student.lessons_count += 1
+                session.add(lesson)
+                session.add(student)
+                send_notification(config.TUTOR_ID, f"❌ Занятие студента {student.full_name} на {lesson.date_time.strftime('%d.%m.%Y %H:%M')} отменено. Количество занятий студента увеличено на 1. Текущий баланс: {student.lessons_count}")
+                if student.telegram_id and student.receive_notifications:
+                    send_notification(student.telegram_id, f"❌ Занятие на {lesson.date_time.strftime('%d.%m.%Y %H:%M')} отменено.")
+            else:
+                send_notification(config.TUTOR_ID, f"Занятие студента {student.full_name} на {lesson.date_time.strftime('%d.%m.%Y %H:%M')} уже имеет статус '{lesson.status}'. Количество занятий не изменено.")
+
+        return redirect(next_url) # <--- ИЗМЕНЕНО: Перенаправляем на URL, полученный из параметра 'next'
 
 @app.route('/mark_homework_completed_web/<int:homework_id>')
 def mark_homework_completed_web(homework_id):
@@ -483,6 +516,44 @@ def send_lesson_report(lesson, student, report_status, homework_description=None
                 send_notification(parent.telegram_id, message_to_parents)
 
 
+@app.route('/statistics')
+def statistics():
+    with session_scope() as session:
+        students_data = []
+        students = session.query(Student).filter_by(is_archived=False).all()  # Исключаем архивированных студентов
+
+        for student in students:
+            completed_lessons = session.query(Lesson).filter_by(
+                student_id=student.id,
+                status='completed'
+            ).count()
+
+            no_show_lessons = session.query(Lesson).filter_by(
+                student_id=student.id,
+                status='no_show'
+            ).count()
+
+            cancelled_lessons = session.query(Lesson).filter_by(
+                student_id=student.id,
+                status='cancelled'
+            ).count()
+
+            scheduled_lessons = session.query(Lesson).filter_by(
+                student_id=student.id,
+                status='scheduled'
+            ).count()
+
+            students_data.append({
+                'full_name': student.full_name,
+                'current_balance': student.lessons_count,
+                'total_completed_lessons': completed_lessons,
+                'total_no_show_lessons': no_show_lessons,
+                'total_cancelled_lessons': cancelled_lessons,
+                'total_missed_lessons': no_show_lessons + cancelled_lessons,  # Сумма прогулов и отмен
+                'total_scheduled_lessons': scheduled_lessons
+            })
+    return render_template('statistics.html', students_data=students_data)
+
 def reminder_loop():
     while True:
         with session_scope() as session:
@@ -531,6 +602,54 @@ def reminder_loop():
                                       f"Пожалуйста, подтвердите выполнение кнопкой под сообщением с ДЗ, или отправьте '/complete_homework_{homework.id}'")
 
         time.sleep(60)
+
+@app.route('/mark_homework_incomplete/<int:homework_id>')
+def mark_homework_incomplete(homework_id):
+    # По умолчанию перенаправляем на список студентов, если next не указан
+    default_redirect_url = url_for('students')
+
+    with session_scope() as session:
+        homework = session.query(Homework).get(homework_id)
+        if not homework:
+            return redirect(default_redirect_url) # Если ДЗ не найдено
+
+        student_id = homework.student_id # Получаем student_id из найденного ДЗ
+
+        # Определяем URL для перенаправления.
+        # Если next-параметр был передан, используем его.
+        # Иначе, возвращаемся на страницу домашних заданий конкретного студента.
+        next_url = request.args.get('next')
+        if not next_url:
+            # Здесь выбираем, куда возвращаться по умолчанию.
+            # Если вы всегда переходите на ДЗ студента через students_homeworks.html, то:
+            next_url = url_for('students_homeworks', student_id=student_id)
+            # Если вы хотите возвращаться на карточку студента, то:
+            # next_url = url_for('student_card', student_id=student_id)
+
+        if homework.is_completed: # Если ДЗ выполнено, меняем на невыполнено
+            homework.is_completed = False
+            homework.completed_date = None # Сбрасываем дату выполнения
+
+            session.add(homework)
+            send_notification(config.TUTOR_ID, f"🔄 Домашнее задание '{homework.description}' студента {homework.student.full_name} помечено как НЕВЫПОЛНЕННОЕ.")
+            if homework.student.telegram_id and homework.student.receive_notifications:
+                send_notification(homework.student.telegram_id, f"🔄 Ваше домашнее задание '{homework.description}' помечено как НЕВЫПОЛНЕННОЕ.")
+        else:
+            # Если ДЗ уже не выполнено, можно просто уведомить или ничего не делать
+            # send_notification(config.TUTOR_ID, f"Домашнее задание '{homework.description}' студента {homework.student.full_name} уже имеет статус 'не выполнено'.")
+            pass # Не отправляем уведомление, если статус не изменился
+
+    return redirect(next_url)
+
+@app.route('/students_homeworks/<int:student_id>')
+def students_homeworks(student_id):
+    with session_scope() as session:
+        student = session.query(Student).get(student_id)
+        if not student:
+            return "Студент не найден", 404
+        homeworks = session.query(Homework).filter_by(student_id=student.id).order_by(Homework.due_date.desc()).all()
+        return render_template('students_homeworks.html', student=student, homeworks=homeworks)
+
 
 
 @bot.message_handler(commands=['start'])
@@ -986,6 +1105,14 @@ def process_next_lesson_date(message, lesson_id, topic_covered, video_link, home
         lesson.video_link = video_link
         lesson.next_lesson_date = next_lesson_date
 
+        # --- НОВЫЙ КОД ДЛЯ ВЫЧЕТА ЗАНЯТИЙ ---
+        if student.lessons_count > 0:
+            student.lessons_count -= 1
+            send_notification(message.chat.id, f"✅ У студента {student.full_name} снято 1 занятие. Текущий баланс: {student.lessons_count}")
+        else:
+            send_notification(message.chat.id, f"ВНИМАНИЕ: Занятие с {student.full_name} отмечено как завершенное, но баланс занятий студента уже 0 или меньше.")
+        # --- КОНЕЦ НОВОГО КОДА ---
+
         if next_lesson_date:
             new_lesson = Lesson(
                 student_id=lesson.student_id,
@@ -998,6 +1125,7 @@ def process_next_lesson_date(message, lesson_id, topic_covered, video_link, home
                 for parent in student.parents:
                     send_notification(parent.telegram_id, f"Новое занятие для {student.full_name} запланировано на: {new_lesson.date_time.strftime('%d.%m.%Y %H:%M')}")
 
+        # Инициализируем homework_obj до условного блока
         homework_obj = None
         if homework_description:
             existing_homework = session.query(Homework).filter_by(lesson_id=lesson.id).first()
@@ -1018,6 +1146,7 @@ def process_next_lesson_date(message, lesson_id, topic_covered, video_link, home
             message.chat.id,
             f"✅ Отчет по занятию с {student.full_name} добавлен. Занятие завершено."
         )
+        # Убедимся, что передаем homework_obj.description только если homework_obj существует
         send_lesson_report(lesson, student, 'completed', homework_obj.description if homework_obj else None)
         todays_schedule(message)
 

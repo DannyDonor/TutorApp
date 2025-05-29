@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Статистика по студентам</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* Добавьте эти стили в ваш style.css или в <style> тег */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .statistics-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .statistics-table th,
+        .statistics-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        .statistics-table th {
+            background-color: #4CAF50;
+            color: white;
+            position: sticky;
+            top: 0; /* Делает заголовки прилипающими при прокрутке */
+            z-index: 1; /* Гарантирует, что заголовки будут поверх содержимого */
+        }
+        .statistics-table tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .statistics-table tr:hover {
+            background-color: #ddd;
+        }
+        .back-button {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+        .back-button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Статистика по студентам</h1>
+
+        <table class="statistics-table">
+            <thead>
+                <tr>
+                    <th>Студент</th>
+                    <th>Текущий баланс</th>
+                    <th>Проведено занятий</th>
+                    <th>Прогулов</th>
+                    <th>Отменено</th>
+                    <th>Всего пропусков</th>
+                    <th>Запланировано</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in students_data %}
+                <tr>
+                    <td>{{ student.full_name }}</td>
+                    <td>{{ student.current_balance }}</td>
+                    <td>{{ student.total_completed_lessons }}</td>
+                    <td>{{ student.total_no_show_lessons }}</td>
+                    <td>{{ student.total_cancelled_lessons }}</td>
+                    <td>{{ student.total_missed_lessons }}</td>
+                    <td>{{ student.total_scheduled_lessons }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <a href="/" class="back-button">Вернуться на главную</a>
+    </div>
+</body>
+</html>
