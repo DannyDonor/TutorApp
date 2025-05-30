@@ -251,86 +251,99 @@ def edit_lesson(lesson_id):
     with session_scope() as session:
         lesson = session.query(Lesson).get(lesson_id)
         if not lesson:
-            return redirect('/today')
+            return "Занятие не найдено", 404
 
-        student = lesson.student
-        current_time = lesson.date_time.strftime('%Y-%m-%dT%H:%M')
-
-        # Инициализация homework до любых условных блоков, чтобы она всегда существовала
-        homework = session.query(Homework).filter_by(lesson_id=lesson.id).first()
+        student = lesson.student # Получаем студента, связанного с занятием
 
         if request.method == 'POST':
-            new_date_time_str = request.form['date_time']
-            new_date_time = datetime.strptime(new_date_time_str, '%Y-%m-%dT%H:%M')
-            report_status = request.form['report_status']
-            topic_covered = request.form['topic_covered']
-            video_link = request.form['video_link']
-            homework_description = request.form['homework_description']
-            next_lesson_date_str = request.form.get('next_lesson_date')
+            old_status = lesson.status # Сохраняем старый статус занятия
 
-            old_status = lesson.status
-            lesson.date_time = new_date_time
-            lesson.status = report_status
-            lesson.topic = topic_covered
-            lesson.video_link = video_link
+            # Обновление времени занятия
+            lesson.date_time = datetime.strptime(request.form['date_time'], '%Y-%m-%dT%H:%M')
 
-            # Update lessons_count based on status change
-            if old_status == 'scheduled' and report_status in ['cancelled', 'no_show']:
-                # If lesson was scheduled and now is cancelled or no_show, increment student's lessons_count back
-                student.lessons_count += 1
-                send_notification(config.TUTOR_ID, f"❕ Количество занятий у студента {student.full_name} увеличено на 1 (урок {old_status} -> {report_status}). Текущий баланс: {student.lessons_count}")
-            elif old_status in ['cancelled', 'no_show'] and report_status == 'scheduled':
-                # If lesson was cancelled/no_show and now is scheduled, decrement student's lessons_count
+            # Обновление статуса занятия и связанного с ним баланса
+            new_status = request.form.get('report_status') # Это поле из edit_lesson.html
+            lesson.status = new_status
+
+            # Логика для изменения количества занятий у студента
+            if old_status != 'completed' and new_status == 'completed':
+                # Занятие только что стало 'completed' (было 'scheduled', 'cancelled', 'no_show')
                 if student.lessons_count > 0:
                     student.lessons_count -= 1
-                    send_notification(config.TUTOR_ID, f"❕ Количество занятий у студента {student.full_name} уменьшено на 1 (урок {old_status} -> {report_status}). Текущий баланс: {student.lessons_count}")
+                    send_notification(config.TUTOR_ID, f"➖ Урок со студентом {student.full_name} ({lesson.date_time.strftime('%d.%m.%Y %H:%M')}) отмечен как проведенный. Осталось занятий: {student.lessons_count}.")
+                    if student.telegram_id and student.receive_notifications:
+                        send_notification(student.telegram_id, f"🎉 Урок {lesson.date_time.strftime('%d.%m.%Y %H:%M')} успешно проведен! Осталось занятий: {student.lessons_count}.")
                 else:
-                    # Prevent negative lesson count, revert status or inform tutor
-                    lesson.status = old_status # Revert status if no lessons available
-                    send_notification(config.TUTOR_ID, f"⚠️ Невозможно запланировать урок для {student.full_name}. Недостаточно занятий на балансе.")
+                    send_notification(config.TUTOR_ID, f"❗Урок со студентом {student.full_name} ({lesson.date_time.strftime('%d.%m.%Y %H:%M')}) отмечен как проведенный, но баланс занятий уже 0. Проверьте баланс.")
+            elif old_status == 'completed' and new_status != 'completed':
+                # Занятие было 'completed', но теперь изменилось на другой статус (отменено, не пришел и т.д.)
+                student.lessons_count += 1
+                send_notification(config.TUTOR_ID, f"➕ Статус урока со студентом {student.full_name} ({lesson.date_time.strftime('%d.%m.%Y %H:%M')}) изменен с 'проведенный'. Баланс занятий восстановлен: {student.lessons_count}.")
+                if student.telegram_id and student.receive_notifications:
+                    send_notification(student.telegram_id, f"🚫 Статус урока {lesson.date_time.strftime('%d.%m.%Y %H:%M')} изменен. Баланс занятий восстановлен: {student.lessons_count}.")
+            # Если old_status и new_status одинаковы или не связаны с 'completed', ничего не делаем с lessons_count
 
-            # Handle homework
+
+            # Обновление полей отчета
+            lesson.topic = request.form.get('topic_covered')
+            lesson.video_link = request.form.get('video_link')
+            lesson.report_status = new_status # Также обновляем report_status
+
+            # Обработка домашнего задания
+            homework_description = request.form.get('homework_description')
             if homework_description:
-                # homework уже инициализирован выше
-                if homework:
-                    homework.description = homework_description
+                if lesson.homework:
+                    lesson.homework.description = homework_description
+                    lesson.homework.due_date = lesson.date_time + timedelta(days=7) # Обновляем срок, если есть
                 else:
                     new_homework = Homework(
-                        lesson_id=lesson.id,
                         student_id=student.id,
-                        description=homework_description
+                        lesson_id=lesson.id,
+                        description=homework_description,
+                        due_date=lesson.date_time + timedelta(days=7), # Пример: через 7 дней от даты урока
+                        is_completed=False # Новое ДЗ по умолчанию не выполнено
                     )
                     session.add(new_homework)
-                    homework = new_homework # Ensure 'homework' refers to the new object for potential later use if needed
-                if student.telegram_id:
-                    send_notification(student.telegram_id, f"📝 Новое домашнее задание по уроку {lesson.date_time.strftime('%d.%m.%Y %H:%M')}: {homework_description}")
-            else:
-                # If homework_description is empty, delete existing homework for this lesson
-                if homework: # Проверяем, существует ли homework перед удалением
-                    session.delete(homework)
-                    homework = None # Устанавливаем homework в None после удаления
+                    send_notification(config.TUTOR_ID, f"📝 Новое домашнее задание для {student.full_name}: '{homework_description}' со сроком {new_homework.due_date.strftime('%d.%m.%Y')}.")
+                    if student.telegram_id and student.receive_notifications:
+                        send_notification(student.telegram_id, f"📝 Вам выдано новое домашнее задание: '{homework_description}' со сроком {new_homework.due_date.strftime('%d.%m.%Y')}.")
+            elif lesson.homework: # Если описание ДЗ удалено из формы, а ДЗ существует, удаляем его
+                send_notification(config.TUTOR_ID, f"🗑️ Домашнее задание '{lesson.homework.description}' студента {student.full_name} удалено.")
+                session.delete(lesson.homework)
 
-            # Handle next lesson creation
+
+            # Обработка следующего занятия (автоматическое создание)
+            next_lesson_date_str = request.form.get('next_lesson_date')
             if next_lesson_date_str:
                 next_lesson_date_time = datetime.strptime(next_lesson_date_str, '%Y-%m-%dT%H:%M')
-                if student.lessons_count > 0:
+                # Проверяем, нет ли уже такого занятия, чтобы избежать дубликатов
+                existing_next_lesson = session.query(Lesson).filter_by(
+                    student_id=student.id,
+                    date_time=next_lesson_date_time,
+                    status='scheduled'
+                ).first()
+
+                if not existing_next_lesson:
                     new_lesson = Lesson(student_id=student.id, date_time=next_lesson_date_time, status='scheduled')
+                    # Если занятие только что создано, добавляем 1 к счетчику
+                    # (это отдельное действие от изменения статуса текущего урока)
+                    student.lessons_count += 1
                     session.add(new_lesson)
-                    student.lessons_count -= 1
-                    send_notification(config.TUTOR_ID, f"📆 Для студента {student.full_name} запланировано следующее занятие на {next_lesson_date_time.strftime('%d.%m.%Y %H:%M')}. Оставшийся баланс занятий: {student.lessons_count}")
+                    send_notification(config.TUTOR_ID, f"🗓️ Для студента {student.full_name} запланировано новое занятие на {next_lesson_date_time.strftime('%d.%m.%Y %H:%M')}. Баланс занятий: {student.lessons_count}.")
+                    if student.telegram_id and student.receive_notifications:
+                        send_notification(student.telegram_id, f"🗓️ Для вас запланировано новое занятие на {next_lesson_date_time.strftime('%d.%m.%Y %H:%M')}. Баланс занятий: {student.lessons_count}.")
                 else:
-                    send_notification(config.TUTOR_ID, f"⚠️ Недостаточно занятий на балансе у студента {student.full_name} для автоматического создания следующего урока.")
+                    send_notification(config.TUTOR_ID, f"🚫 Попытка создать дубликат следующего занятия для {student.full_name} на {next_lesson_date_time.strftime('%d.%m.%Y %H:%M')}.")
 
-            session.add(lesson) # Сохраняем изменения в уроке
-            session.add(student) # Сохраняем изменения в студенте
 
-            return redirect('/today')
+            session.add(lesson) # Сохраняем изменения в текущем занятии
+            session.add(student) # Сохраняем изменения в студенте (lessons_count)
+            # session.commit() # Commit happens automatically due to session_scope
 
-        # Retrieve homework for the lesson if it exists
-        # Эта строка была здесь, но я перенес ее выше для гарантированной инициализации
-        # homework = session.query(Homework).filter_by(lesson_id=lesson.id).first()
-        lesson.homework = homework # Attach homework object to lesson for easy access in template
+            return redirect(url_for('today_lessons')) # Перенаправление после сохранения
 
+        # GET request: Render the form
+        current_time = lesson.date_time.strftime('%Y-%m-%dT%H:%M')
         return render_template('edit_lesson.html', lesson=lesson, student=student, current_time=current_time)
 
 @app.route('/cancel_lesson_web/<int:lesson_id>') # <--- ИЗМЕНЕНО: название маршрута
