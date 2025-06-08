@@ -1,20 +1,28 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="card mt-4">
+<div class="card">
     <div class="card-header">
-        <h2>Добавить родителя для {{ student.full_name }}</h2>
+        <h2>👨‍👩‍👧‍👦 Добавить родителя</h2>
+        <p>Добавление родителя для студента {{ student.full_name }}</p>
     </div>
-    <div class="card-body">
-        <form method="post">
-            <div class="mb-3">
-                <label for="telegram_id" class="form-label">Telegram ID родителя (username без @):</label>
-                <input type="text" class="form-control" id="telegram_id" name="telegram_id" required>
-                <div class="form-text">Убедитесь, что родитель начал диалог с ботом, чтобы бот мог отправлять ему сообщения.</div>
-            </div>
-            <button type="submit" class="btn btn-primary">Добавить родителя</button>
-            <a href="{{ url_for('view_student_card', student_id=student.id) }}" class="btn btn-secondary">Отмена</a>
-        </form>
-    </div>
+    
+    <form method="post" class="auth-form">
+        <div class="form-group">
+            <label for="telegram_chat_id">💬 Telegram Chat ID родителя</label>
+            <input type="text" id="telegram_chat_id" name="telegram_chat_id" required
+                   placeholder="123456789">
+            <small class="form-text">
+                Числовой Chat ID родителя из Telegram (не @username). 
+                Получить можно у <a href="https://t.me/userinfobot" target="_blank">@userinfobot</a>.
+                Убедитесь, что родитель начал диалог с ботом.
+            </small>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">✅ Добавить родителя</button>
+            <a href="{{ url_for('view_student_card', student_id=student.id) }}" class="btn btn-secondary">❌ Отмена</a>
+        </div>
+    </form>
 </div>
 {% endblock %}

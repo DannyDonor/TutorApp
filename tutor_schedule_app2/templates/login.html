@@ -1,0 +1,42 @@
+{% extends "auth_base.html" %}
+
+{% block title %}Вход - TutorApp{% endblock %}
+
+{% block content %}
+<div class="auth-header">
+    <h1>Добро пожаловать!</h1>
+    <p>Войдите в свой аккаунт</p>
+</div>
+
+{% if error %}
+<div class="alert alert-danger">
+    {{ error }}
+</div>
+{% endif %}
+
+{% if success %}
+<div class="alert alert-success">
+    {{ success }}
+</div>
+{% endif %}
+
+<form method="POST" class="auth-form">
+    <div class="form-group">
+        <label for="username">Логин:</label>
+        <input type="text" id="username" name="username" required>
+    </div>
+    
+    <div class="form-group">
+        <label for="password">Пароль:</label>
+        <input type="password" id="password" name="password" required>
+    </div>
+    
+    <button type="submit" class="btn btn-primary">Войти</button>
+</form>
+
+<div class="auth-links">
+    <a href="{{ url_for('register') }}">Нет аккаунта? Зарегистрироваться</a>
+    <br><br>
+    <a href="{{ url_for('forgot_password') }}">Забыли пароль?</a>
+</div>
+{% endblock %}

@@ -1,43 +1,158 @@
 {% extends "base.html" %}
 
-{% block content %}
-<h2>Домашние задания студента: {{ student.full_name }}</h2>
-<a href="{{ url_for('view_student_lessons', student_id=student.id) }}" class="btn btn-secondary mb-3">Назад к занятиям</a>
+{% block title %}Домашние задания {{ student.full_name }} - TutorApp{% endblock %}
 
-{% if homeworks %}
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Задание</th>
-            <th>Урок от</th>
-            <th>Статус</th>
-            <th>Дата выполнения</th>
-            <th>Действия</th>
-        </tr>
-    </thead>
-    <tbody>
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>📚 Домашние задания: {{ student.full_name }}</h2>
+        <div class="header-actions">
+            <a href="{{ url_for('view_student_card', student_id=student.id) }}" class="btn btn-secondary">
+                ← Назад к карточке студента
+            </a>
+        </div>
+    </div>
+    
+    {% if homeworks %}
         {% for hw in homeworks %}
-        <tr>
-            <td>{{ hw.description }}</td>
-            <td>{{ hw.lesson.date_time.strftime('%d.%m.%Y %H:%M') if hw.lesson else 'N/A' }}</td>
-            <td>
-                {% if hw.is_completed %}
-                    <span class="badge bg-success">Выполнено</span>
-                {% else %}
-                    <span class="badge bg-warning text-dark">Не выполнено</span>
+        <div class="homework-card tutor-view">
+            <div class="homework-header">
+                <h3>📝 {{ hw.description }}</h3>
+                <div class="homework-status">
+                    {% if hw.is_confirmed_by_tutor %}
+                        <span class="status-badge status-completed">✅ Подтверждено</span>
+                    {% elif hw.submitted_date %}
+                        <span class="status-badge status-pending">⏳ Ожидает проверки</span>
+                    {% elif hw.is_completed %}
+                        <span class="status-badge status-completed">✅ Выполнено</span>
+                    {% else %}
+                        <span class="status-badge status-scheduled">📋 Не выполнено</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="homework-details">
+                {% if hw.lesson %}
+                <p><strong>📅 Урок от:</strong> {{ hw.lesson.date_time.strftime('%d.%m.%Y %H:%M') }}</p>
                 {% endif %}
-            </td>
-            <td>{{ hw.completed_date.strftime('%d.%m.%Y %H:%M') if hw.completed_date else 'Не выполнено' }}</td>
-            <td>
-                {% if not hw.is_completed %}
-                <a href="{{ url_for('mark_homework_completed_web', homework_id=hw.id) }}" class="btn btn-sm btn-success" onclick="return confirm('Вы уверены, что хотите отметить это ДЗ как выполненное?')">Отметить как выполненное</a>
+                
+                {% if hw.due_date %}
+                <p><strong>⏰ Срок выполнения:</strong> {{ hw.due_date.strftime('%d.%m.%Y') }}</p>
                 {% endif %}
-            </td>
-        </tr>
+                
+                {% if hw.submitted_date %}
+                <p><strong>📤 Отправлено студентом:</strong> {{ hw.submitted_date.strftime('%d.%m.%Y %H:%M') }}</p>
+                {% endif %}
+                
+                {% if hw.completed_date %}
+                <p><strong>✅ Подтверждено:</strong> {{ hw.completed_date.strftime('%d.%m.%Y %H:%M') }}</p>
+                {% endif %}
+                
+                {% if hw.student_comment %}
+                <div class="student-comment">
+                    <strong>💬 Комментарий студента:</strong>
+                    <p>{{ hw.student_comment }}</p>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="homework-actions">
+                {% if hw.submitted_date and not hw.is_confirmed_by_tutor %}
+                    <a href="{{ url_for('confirm_homework_tutor', homework_id=hw.id) }}" 
+                       class="btn btn-primary" onclick="return confirm('Подтвердить выполнение домашнего задания?')">
+                        ✅ Подтвердить выполнение
+                    </a>
+                    <a href="{{ url_for('mark_homework_incomplete', homework_id=hw.id) }}" 
+                       class="btn btn-warning" onclick="return confirm('Отметить как невыполненное?')">
+                        ❌ Отклонить
+                    </a>
+                {% elif not hw.is_completed %}
+                    <a href="{{ url_for('mark_homework_completed_web', homework_id=hw.id) }}" 
+                       class="btn btn-success" onclick="return confirm('Отметить как выполненное без проверки?')">
+                        ✅ Отметить выполненным
+                    </a>
+                    <a href="{{ url_for('mark_homework_incomplete', homework_id=hw.id) }}" 
+                       class="btn btn-warning" onclick="return confirm('Отметить как невыполненное?')">
+                        ❌ Отметить невыполненным
+                    </a>
+                {% elif hw.is_confirmed_by_tutor %}
+                    <span class="text-success">✅ Задание подтверждено</span>
+                {% endif %}
+            </div>
+        </div>
         {% endfor %}
-    </tbody>
-</table>
-{% else %}
-<p>У этого студента нет выданных домашних заданий.</p>
-{% endif %}
+    {% else %}
+    <div class="alert alert-info">
+        📚 У этого студента пока нет домашних заданий.
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.homework-card.tutor-view {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    margin-bottom: 1.5rem;
+    background: white;
+    overflow: hidden;
+}
+
+.homework-card.tutor-view .homework-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: var(--secondary-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.homework-card.tutor-view .homework-header h3 {
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.homework-card.tutor-view .homework-details {
+    padding: 1.5rem;
+}
+
+.homework-card.tutor-view .homework-details p {
+    margin: 0.5rem 0;
+}
+
+.homework-card.tutor-view .student-comment {
+    background: #e3f2fd;
+    padding: 1rem;
+    border-radius: var(--radius-sm);
+    margin-top: 1rem;
+    border-left: 4px solid #2196f3;
+}
+
+.homework-card.tutor-view .student-comment p {
+    margin: 0.5rem 0 0 0;
+    white-space: pre-wrap;
+    font-style: italic;
+}
+
+.homework-card.tutor-view .homework-actions {
+    padding: 0 1.5rem 1.5rem;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.header-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.status-pending {
+    background: #ff9800;
+    color: white;
+}
+
+.text-success {
+    color: #28a745 !important;
+    font-weight: bold;
+}
+</style>
 {% endblock %}

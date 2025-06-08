@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Домашние задания на проверке - TutorApp{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>📋 Домашние задания на проверке</h2>
+        <p>Задания, отправленные студентами и ожидающие вашего подтверждения</p>
+    </div>
+    
+    {% if pending_homeworks %}
+        {% for hw in pending_homeworks %}
+        <div class="homework-card pending-review">
+            <div class="homework-header">
+                <div class="homework-info">
+                    <h3>📝 {{ hw.description }}</h3>
+                    <p class="student-name">👤 {{ hw.student.full_name }}</p>
+                </div>
+                <div class="homework-status">
+                    <span class="status-badge status-pending">⏳ Ожидает проверки</span>
+                </div>
+            </div>
+            
+            <div class="homework-details">
+                {% if hw.lesson %}
+                <p><strong>📅 Урок от:</strong> {{ hw.lesson.date_time.strftime('%d.%m.%Y %H:%M') }}</p>
+                {% endif %}
+                
+                {% if hw.due_date %}
+                <p><strong>⏰ Срок выполнения:</strong> {{ hw.due_date.strftime('%d.%m.%Y') }}</p>
+                {% endif %}
+                
+                <p><strong>📤 Отправлено:</strong> {{ hw.submitted_date.strftime('%d.%m.%Y %H:%M') }}</p>
+                
+                {% if hw.student_comment %}
+                <div class="student-comment">
+                    <strong>💬 Комментарий студента:</strong>
+                    <p>{{ hw.student_comment }}</p>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="homework-actions">
+                <a href="{{ url_for('confirm_homework_tutor', homework_id=hw.id) }}" 
+                   class="btn btn-primary" onclick="return confirm('Подтвердить выполнение домашнего задания?')">
+                    ✅ Подтвердить выполнение
+                </a>
+                <a href="{{ url_for('mark_homework_incomplete', homework_id=hw.id) }}" 
+                   class="btn btn-warning" onclick="return confirm('Отметить как невыполненное?')">
+                    ❌ Отклонить
+                </a>
+                <a href="{{ url_for('view_student_card', student_id=hw.student_id) }}" 
+                   class="btn btn-secondary">
+                    👤 Карточка студента
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+    <div class="alert alert-info">
+        📋 Нет домашних заданий, ожидающих проверки.
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.homework-card.pending-review {
+    border: 1px solid #ff9800;
+    border-radius: var(--radius-md);
+    margin-bottom: 1.5rem;
+    background: white;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(255, 152, 0, 0.1);
+}
+
+.homework-card.pending-review .homework-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 1rem 1.5rem;
+    background: #fff3e0;
+    border-bottom: 1px solid #ff9800;
+}
+
+.homework-info h3 {
+    margin: 0 0 0.5rem 0;
+    color: var(--text-primary);
+}
+
+.student-name {
+    margin: 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.homework-card.pending-review .homework-details {
+    padding: 1.5rem;
+}
+
+.homework-card.pending-review .homework-details p {
+    margin: 0.5rem 0;
+}
+
+.homework-card.pending-review .student-comment {
+    background: #e3f2fd;
+    padding: 1rem;
+    border-radius: var(--radius-sm);
+    margin-top: 1rem;
+    border-left: 4px solid #2196f3;
+}
+
+.homework-card.pending-review .student-comment p {
+    margin: 0.5rem 0 0 0;
+    white-space: pre-wrap;
+    font-style: italic;
+}
+
+.homework-card.pending-review .homework-actions {
+    padding: 0 1.5rem 1.5rem;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.status-pending {
+    background: #ff9800;
+    color: white;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+</style>
+{% endblock %}

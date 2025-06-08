@@ -1,60 +1,104 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="card mt-4">
+<div class="card">
     <div class="card-header">
-        <h2>Изменение занятия и отчет</h2>
+        <h2>📝 Изменение занятия и отчет</h2>
+        <p>Редактирование занятия и создание отчета</p>
     </div>
-    <div class="card-body">
-        <form method="POST">
-            <div class="mb-3">
-                <label for="date_time" class="form-label">Дата и время</label>
-                <input type="datetime-local" class="form-control" id="date_time" name="date_time"
-                       value="{{ current_time }}" required>
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Студент</label>
-                <input type="text" class="form-control" value="{{ student.full_name }}" readonly>
-            </div>
+    
+    <form method="POST" class="auth-form">
+        <div class="form-group">
+            <label for="date_time">🕐 Дата и время</label>
+            <input type="datetime-local" id="date_time" name="date_time"
+                   value="{{ current_time }}" required>
+        </div>
+        
+        <div class="form-group">
+            <label>👤 Студент</label>
+            <input type="text" value="{{ student.full_name }}" readonly>
+        </div>
 
-            <hr>
-            <h4>Отчет о занятии</h4>
+        <hr>
+        <div class="section-header">
+            <h3>📋 Отчет о занятии</h3>
+        </div>
 
-            <div class="mb-3">
-                <label for="report_status" class="form-label">Статус занятия:</label>
-                <select class="form-select" id="report_status" name="report_status">
-                    <option value="scheduled" {% if lesson.status == 'scheduled' %}selected{% endif %}>Запланировано</option>
-                    <option value="completed" {% if lesson.status == 'completed' %}selected{% endif %}>Проведено</option>
-                    <option value="cancelled" {% if lesson.status == 'cancelled' %}selected{% endif %}>Отменено</option>
-                    <option value="no_show" {% if lesson.status == 'no_show' %}selected{% endif %}>Студент не пришел</option>
-                </select>
-            </div>
+        <div class="form-group">
+            <label for="report_status">📊 Статус занятия</label>
+            <select id="report_status" name="report_status">
+                <option value="запланирован" {% if lesson.status == 'запланирован' %}selected{% endif %}>⏰ Запланировано</option>
+                <option value="проведен" {% if lesson.status == 'проведен' %}selected{% endif %}>✅ Проведено</option>
+                <option value="отменен" {% if lesson.status == 'отменен' %}selected{% endif %}>❌ Отменено</option>
+                <option value="не_пришел" {% if lesson.status == 'не_пришел' %}selected{% endif %}>👻 Студент не пришел</option>
+            </select>
+        </div>
 
-            <div class="mb-3">
-                <label for="topic_covered" class="form-label">Тема занятия:</label>
-                <input type="text" class="form-control" id="topic_covered" name="topic_covered" value="{{ lesson.topic_covered or '' }}">
-            </div>
+        <div class="form-group">
+            <label for="topic_covered">📚 Тема занятия</label>
+            <input type="text" id="topic_covered" name="topic_covered" 
+                   value="{{ lesson.topic_covered or '' }}"
+                   placeholder="Введите тему урока">
+        </div>
 
-            <div class="mb-3">
-                <label for="video_link" class="form-label">Ссылка на видео:</label>
-                <input type="url" class="form-control" id="video_link" name="video_link" value="{{ lesson.video_link or '' }}">
-            </div>
+        <div class="form-group">
+            <label for="video_status">🎥 Статус видео</label>
+            <select id="video_status" name="video_status" onchange="toggleVideoLink()">
+                <option value="pending" {% if lesson.video_status == 'pending' or not lesson.video_status %}selected{% endif %}>⏳ Не добавлено</option>
+                <option value="added" {% if lesson.video_status == 'added' %}selected{% endif %}>✅ Добавить сейчас</option>
+                <option value="later" {% if lesson.video_status == 'later' %}selected{% endif %}>⏰ Добавить позже</option>
+            </select>
+        </div>
 
-            <div class="mb-3">
-                <label for="homework_description" class="form-label">Домашнее задание:</label>
-                <textarea class="form-control" id="homework_description" name="homework_description" rows="3">{{ lesson.homework.description if lesson.homework else '' }}</textarea>
-            </div>
+        <div class="form-group" id="video_link_group" style="display: none;">
+            <label for="video_link">🔗 Ссылка на видео</label>
+            <input type="url" id="video_link" name="video_link" 
+                   value="{{ lesson.video_link or '' }}"
+                   placeholder="https://example.com/video">
+            <small class="form-text">Введите ссылку на запись урока</small>
+        </div>
 
-            <div class="mb-3">
-                <label for="next_lesson_date" class="form-label">Дата и время следующего занятия (для автоматического создания):</label>
-                <input type="datetime-local" class="form-control" id="next_lesson_date" name="next_lesson_date"
-                       value="{{ lesson.next_lesson_date.strftime('%Y-%m-%dT%H:%M') if lesson.next_lesson_date else '' }}">
-                <div class="form-text">Оставьте пустым, если следующее занятие не запланировано автоматически.</div>
-            </div>
+        <div class="form-group">
+            <label for="homework_description">📝 Домашнее задание</label>
+            <textarea id="homework_description" name="homework_description" 
+                      rows="4" placeholder="Опишите домашнее задание">{{ lesson.homework.description if lesson.homework else '' }}</textarea>
+        </div>
 
-            <button type="submit" class="btn btn-primary">Сохранить отчет</button>
-            <a href="{{ url_for('today_lessons') }}" class="btn btn-secondary">Отмена</a>
-        </form>
-    </div>
+        <div class="form-group">
+            <label for="next_lesson_date">📅 Следующее занятие</label>
+            <input type="datetime-local" id="next_lesson_date" name="next_lesson_date"
+                   value="{{ lesson.next_lesson_date.strftime('%Y-%m-%dT%H:%M') if lesson.next_lesson_date else '' }}">
+            <small class="form-text">Оставьте пустым, если следующее занятие не запланировано автоматически</small>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">💾 Сохранить отчет</button>
+            <a href="{{ url_for('today_lessons') }}" class="btn btn-secondary">❌ Отмена</a>
+        </div>
+    </form>
 </div>
+
+<script>
+function toggleVideoLink() {
+    const videoStatus = document.getElementById('video_status').value;
+    const videoLinkGroup = document.getElementById('video_link_group');
+    const videoLinkInput = document.getElementById('video_link');
+    
+    if (videoStatus === 'added') {
+        videoLinkGroup.style.display = 'block';
+        videoLinkInput.required = true;
+    } else {
+        videoLinkGroup.style.display = 'none';
+        videoLinkInput.required = false;
+        if (videoStatus === 'later') {
+            videoLinkInput.value = '';
+        }
+    }
+}
+
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    toggleVideoLink();
+});
+</script>
 {% endblock %}

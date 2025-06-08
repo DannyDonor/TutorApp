@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Создать пользователя - TutorApp{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>Создать нового пользователя</h2>
+    </div>
+    
+    {% if error %}
+    <div class="alert alert-danger">
+        {{ error }}
+    </div>
+    {% endif %}
+    
+    <form method="POST" class="auth-form">
+        <div class="form-group">
+            <label for="username">Логин:</label>
+            <input type="text" id="username" name="username" required 
+                   value="{{ request.form.username if request.form.username }}">
+        </div>
+        
+        <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" required 
+                   value="{{ request.form.email if request.form.email }}">
+        </div>
+        
+        <div class="form-group">
+            <label for="password">Пароль:</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="role">Роль:</label>
+            <select id="role" name="role" required>
+                <option value="">Выберите роль</option>
+                <option value="admin" {{ 'selected' if request.form.role == 'admin' }}>Администратор</option>
+                <option value="tutor" {{ 'selected' if request.form.role == 'tutor' }}>Репетитор</option>
+                <option value="student" {{ 'selected' if request.form.role == 'student' }}>Студент</option>
+            </select>
+        </div>
+        
+        <div class="form-group" id="student-select" style="display: none;">
+            <label for="student_id">Связанный студент:</label>
+            <select id="student_id" name="student_id">
+                <option value="">Выберите студента</option>
+                {% for student in students %}
+                <option value="{{ student.id }}" {{ 'selected' if request.form.student_id == student.id|string }}>
+                    {{ student.full_name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">Создать пользователя</button>
+            <a href="{{ url_for('manage_users') }}" class="btn btn-secondary">Отмена</a>
+        </div>
+    </form>
+</div>
+
+<script>
+document.getElementById('role').addEventListener('change', function() {
+    const studentSelect = document.getElementById('student-select');
+    if (this.value === 'student') {
+        studentSelect.style.display = 'block';
+        document.getElementById('student_id').required = true;
+    } else {
+        studentSelect.style.display = 'none';
+        document.getElementById('student_id').required = false;
+        document.getElementById('student_id').value = '';
+    }
+});
+
+// Проверяем при загрузке страницы
+if (document.getElementById('role').value === 'student') {
+    document.getElementById('student-select').style.display = 'block';
+    document.getElementById('student_id').required = true;
+}
+</script>
+{% endblock %}

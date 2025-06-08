@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}Домашние задания - TutorApp{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>📚 Мои домашние задания</h2>
+        <p>Управление домашними заданиями</p>
+    </div>
+    
+    {% if homeworks %}
+        {% for homework in homeworks %}
+        <div class="homework-card">
+            <div class="homework-header">
+                <h3>📝 {{ homework.description }}</h3>
+                <div class="homework-status">
+                    {% if homework.is_confirmed_by_tutor %}
+                        <span class="status-badge status-completed">✅ Подтверждено</span>
+                    {% elif homework.submitted_date %}
+                        <span class="status-badge status-pending">⏳ Ожидает проверки</span>
+                    {% elif homework.is_completed %}
+                        <span class="status-badge status-completed">✅ Выполнено</span>
+                    {% else %}
+                        <span class="status-badge status-scheduled">📋 В процессе</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="homework-details">
+                {% if homework.due_date %}
+                <p><strong>📅 Срок:</strong> {{ homework.due_date.strftime('%d.%m.%Y') }}</p>
+                {% endif %}
+                
+                {% if homework.submitted_date %}
+                <p><strong>📤 Отправлено:</strong> {{ homework.submitted_date.strftime('%d.%m.%Y %H:%M') }}</p>
+                {% endif %}
+                
+                {% if homework.completed_date %}
+                <p><strong>✅ Выполнено:</strong> {{ homework.completed_date.strftime('%d.%m.%Y %H:%M') }}</p>
+                {% endif %}
+                
+                {% if homework.student_comment %}
+                <div class="student-comment">
+                    <strong>💬 Мой комментарий:</strong>
+                    <p>{{ homework.student_comment }}</p>
+                </div>
+                {% endif %}
+            </div>
+            
+            {% if not homework.is_confirmed_by_tutor and not homework.submitted_date %}
+            <div class="homework-actions">
+                <button class="btn btn-primary" onclick="showSubmitForm({{ homework.id }})">
+                    📤 Отправить на проверку
+                </button>
+            </div>
+            
+            <div id="submit-form-{{ homework.id }}" class="submit-form" style="display: none;">
+                <form method="POST" action="{{ url_for('submit_homework_student', homework_id=homework.id) }}">
+                    <div class="form-group">
+                        <label for="comment-{{ homework.id }}">💬 Комментарий (ссылки, код, заметки)</label>
+                        <textarea id="comment-{{ homework.id }}" name="student_comment" 
+                                  rows="4" placeholder="Добавьте ссылки на выполненную работу, код или комментарии..."></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">✅ Отправить</button>
+                        <button type="button" class="btn btn-secondary" onclick="hideSubmitForm({{ homework.id }})">❌ Отмена</button>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    {% else %}
+    <div class="alert alert-info">
+        📚 У вас пока нет домашних заданий.
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.homework-card {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    margin-bottom: 1.5rem;
+    background: white;
+    overflow: hidden;
+}
+
+.homework-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: var(--secondary-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.homework-header h3 {
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.homework-details {
+    padding: 1.5rem;
+}
+
+.homework-details p {
+    margin: 0.5rem 0;
+}
+
+.student-comment {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: var(--radius-sm);
+    margin-top: 1rem;
+}
+
+.student-comment p {
+    margin: 0.5rem 0 0 0;
+    white-space: pre-wrap;
+}
+
+.homework-actions {
+    padding: 0 1.5rem 1.5rem;
+}
+
+.submit-form {
+    padding: 0 1.5rem 1.5rem;
+    border-top: 1px solid var(--border-color);
+    background: #f8f9fa;
+}
+
+.status-pending {
+    background: #ffc107;
+    color: #000;
+}
+</style>
+
+<script>
+function showSubmitForm(homeworkId) {
+    document.getElementById('submit-form-' + homeworkId).style.display = 'block';
+}
+
+function hideSubmitForm(homeworkId) {
+    document.getElementById('submit-form-' + homeworkId).style.display = 'none';
+}
+</script>
+{% endblock %}

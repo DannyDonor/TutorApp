@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Мои уроки - TutorApp{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>Мои уроки</h2>
+    </div>
+    
+    {% if lessons %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Дата и время</th>
+                <th>Статус</th>
+                <th>Тема урока</th>
+                <th>Ссылка на видео</th>
+                <th>Следующий урок</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for lesson in lessons %}
+            <tr>
+                <td>{{ lesson.date_time.strftime('%d.%m.%Y %H:%M') }}</td>
+                <td>
+                    <span class="status-badge status-{{ lesson.status }}">
+                        {% if lesson.status == 'scheduled' %}Запланирован
+                        {% elif lesson.status == 'completed' %}Проведен
+                        {% elif lesson.status == 'cancelled' %}Отменен
+                        {% elif lesson.status == 'no_show' %}Не явился
+                        {% endif %}
+                    </span>
+                </td>
+                <td>{{ lesson.topic_covered or '-' }}</td>
+                <td>
+                    {% if lesson.video_link %}
+                        <a href="{{ lesson.video_link }}" target="_blank" class="btn btn-secondary">Смотреть</a>
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    {% if lesson.next_lesson_date %}
+                        {{ lesson.next_lesson_date.strftime('%d.%m.%Y %H:%M') }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="alert alert-info">
+        У вас пока нет запланированных уроков.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

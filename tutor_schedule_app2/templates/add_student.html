@@ -1,28 +1,93 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="card mt-4">
+<div class="card">
     <div class="card-header">
-        <h2>Добавление студента</h2>
+        <h2>👤 Добавление студента</h2>
+        <p>Создание нового студента в системе</p>
     </div>
-    <div class="card-body">
-        <form method="post">
-            <div class="mb-3">
-                <label for="full_name" class="form-label">ФИО:</label>
-                <input type="text" class="form-control" id="full_name" name="full_name" required>
+    
+    <form method="post" class="auth-form">
+        <div class="form-group">
+            <label for="full_name">👤 ФИО студента</label>
+            <input type="text" id="full_name" name="full_name" required 
+                   placeholder="Введите полное имя студента">
+        </div>
+        
+        <div class="form-group">
+            <label for="lessons_count">📚 Количество занятий</label>
+            <input type="number" id="lessons_count" name="lessons_count" 
+                   value="0" min="0" required 
+                   placeholder="Количество оплаченных занятий">
+        </div>
+        
+        <div class="form-group">
+            <label for="telegram_chat_id">💬 Telegram Chat ID</label>
+            <input type="text" id="telegram_chat_id" name="telegram_chat_id"
+                   placeholder="123456789">
+            <small class="form-text">
+                Числовой Chat ID из Telegram (не @username). 
+                Получить можно у <a href="https://t.me/userinfobot" target="_blank">@userinfobot</a>
+            </small>
+        </div>
+        
+        <div class="form-group">
+            <label class="checkbox-label">
+                <input type="checkbox" id="create_account" name="create_account" onchange="toggleAccountFields()">
+                <span class="checkmark"></span>
+                🔐 Создать аккаунт для студента
+            </label>
+        </div>
+      
+          <div id="account-fields" style="display: none;">
+            <hr>
+            <div class="section-header">
+                <h3>🔐 Данные аккаунта</h3>
             </div>
-            <div class="mb-3">
-                <label for="lessons_count" class="form-label">Количество занятий:</label>
-                <input type="number" class="form-control" id="lessons_count" name="lessons_count" value="0" min="0" required>
+            
+            <div class="form-group">
+                <label for="username">👤 Логин</label>
+                <input type="text" id="username" name="username" 
+                       placeholder="Логин для входа в систему">
             </div>
-            <div class="mb-3">
-                <label for="telegram_id" class="form-label">Telegram ID (username без @):</label>
-                <input type="text" class="form-control" id="telegram_id" name="telegram_id">
-                <div class="form-text">Оставьте пустым, если Telegram ID неизвестен.</div>
+            
+            <div class="form-group">
+                <label for="email">📧 Email</label>
+                <input type="email" id="email" name="email" 
+                       placeholder="email@example.com">
             </div>
-            <button type="submit" class="btn btn-primary">Добавить студента</button>
-            <a href="{{ url_for('all_students') }}" class="btn btn-secondary">Отмена</a>
-        </form>
-    </div>
+            
+            <div class="form-group">
+                <label for="password">🔒 Пароль</label>
+                <input type="text" id="password" name="password" value="student123"
+                       placeholder="Пароль для входа">
+                <small class="form-text">По умолчанию: student123</small>
+            </div>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">✅ Добавить студента</button>
+            <a href="{{ url_for('all_students') }}" class="btn btn-secondary">❌ Отмена</a>
+        </div>
+    </form>
 </div>
+
+<script>
+function toggleAccountFields() {
+    const checkbox = document.getElementById('create_account');
+    const fields = document.getElementById('account-fields');
+    const usernameField = document.getElementById('username');
+    const emailField = document.getElementById('email');
+    
+    if (checkbox.checked) {
+        fields.style.display = 'block';
+        usernameField.required = true;
+        emailField.required = true;
+    } else {
+        fields.style.display = 'none';
+        usernameField.required = false;
+        emailField.required = false;
+    }
+}
+</script>
 {% endblock %}

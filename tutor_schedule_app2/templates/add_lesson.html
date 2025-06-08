@@ -1,27 +1,32 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="card mt-4">
+<div class="card">
     <div class="card-header">
-        <h2>Добавление занятия</h2>
+        <h2>📅 Добавление занятия</h2>
+        <p>Создание нового занятия для студента</p>
     </div>
-    <div class="card-body">
-        <form method="post">
-            <div class="mb-3">
-                <label for="student_id" class="form-label">Студент:</label>
-                <select class="form-select" id="student_id" name="student_id" required>
-                    {% for s in students %}
-                        <option value="{{ s.id }}">{{ s.full_name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="mb-3">
-                <label for="date_time" class="form-label">Дата и время занятия:</label>
-                <input type="datetime-local" class="form-control" id="date_time" name="date_time" required>
-            </div>
-            <button type="submit" class="btn btn-primary">Назначить занятие</button>
-            <a href="{{ url_for('all_lessons') }}" class="btn btn-secondary">Отмена</a>
-        </form>
-    </div>
+    
+    <form method="post" class="auth-form">
+        <div class="form-group">
+            <label for="student_id">👤 Студент</label>
+            <select id="student_id" name="student_id" required>
+                <option value="">Выберите студента</option>
+                {% for s in students %}
+                    <option value="{{ s.id }}">{{ s.full_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="date_time">🕐 Дата и время занятия</label>
+            <input type="datetime-local" id="date_time" name="date_time" required>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">✅ Назначить занятие</button>
+            <a href="{{ url_for('all_lessons') }}" class="btn btn-secondary">❌ Отмена</a>
+        </div>
+    </form>
 </div>
 {% endblock %}
