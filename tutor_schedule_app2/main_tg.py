@@ -5,6 +5,7 @@ import config
 from datetime import datetime, timedelta
 from contextlib import contextmanager
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import func
 import secrets
 import time
 from threading import Thread
@@ -791,9 +792,6 @@ def handle_unknown_message(message):
         else:
             send_notification(message.chat.id, 
                 "Я не понимаю эту команду. Используйте /start для начала работы.")
-
-# Импорт функций из sqlalchemy для работы с датами
-from sqlalchemy import func
 
 # Функция для запуска бота
 def run_bot():

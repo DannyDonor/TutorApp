@@ -12,6 +12,7 @@ from threading import Thread
 from database import Session
 from contextlib import contextmanager
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import text
 
 # Добавляем текущую директорию в путь для импортов
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -39,7 +40,7 @@ def check_database():
     try:
         with session_scope() as session:
             # Простой тест подключения
-            session.execute("SELECT 1")
+            session.execute(text("SELECT 1"))
         print("✅ База данных доступна")
         return True
     except Exception as e:
@@ -62,8 +63,8 @@ def run_telegram_bot():
     global shutdown_flag
     try:
         print("🤖 Запуск Telegram бота...")
-        from main_tg import start_bot
-        start_bot()
+        from main_tg import run_bot
+        run_bot()
     except Exception as e:
         print(f"❌ Ошибка Telegram бота: {e}")
         shutdown_flag = True

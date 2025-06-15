@@ -154,17 +154,29 @@
             <div class="action-description">Просмотр, модерация курсов</div>
         </a>
         
-        <div class="action-card disabled">
+        <a href="{{ url_for('analytics_dashboard') }}" class="action-card">
             <div class="action-icon">📊</div>
-            <div class="action-title">Аналитика (скоро)</div>
+            <div class="action-title">Аналитика</div>
             <div class="action-description">Подробная статистика и отчеты</div>
-        </div>
+        </a>
         
-        <div class="action-card disabled">
+        <a href="{{ url_for('system_settings') }}" class="action-card">
             <div class="action-icon">⚙️</div>
-            <div class="action-title">Настройки (скоро)</div>
-            <div class="action-description">Конфигурация платформы</div>
-        </div>
+            <div class="action-title">Системные настройки</div>
+            <div class="action-description">Конфигурация токена бота и системы</div>
+        </a>
+        
+        <a href="{{ url_for('admin_security') }}" class="action-card">
+            <div class="action-icon">🔒</div>
+            <div class="action-title">Безопасность</div>
+            <div class="action-description">Управление сессиями и доступом</div>
+        </a>
+        
+        <a href="{{ url_for('manage_users') }}" class="action-card">
+            <div class="action-icon">👥</div>
+            <div class="action-title">Пользователи</div>
+            <div class="action-description">Управление всеми пользователями системы</div>
+        </a>
     </div>
 </div>
 

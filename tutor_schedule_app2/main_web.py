@@ -3,6 +3,7 @@ from database import (Session, Student, Lesson, Tutor, Parent, Homework, Payment
                      Course, CourseModule, CourseLesson, CourseMaterial, CourseAssignment, 
                      CourseEnrollment, CourseSubmission, LessonBlock)
 import config
+import os
 from datetime import datetime, timedelta, time
 from contextlib import contextmanager
 from sqlalchemy.exc import SQLAlchemyError, AmbiguousForeignKeysError, OperationalError
@@ -419,10 +420,13 @@ def user_settings():
         current_user = session.get(User, flask_session['user_id'])
         
         if request.method == 'POST':
-            # Обновление токена бота
-            bot_token = request.form.get('bot_token', '').strip()
-            if bot_token:
-                current_user.bot_token = bot_token
+            # Обновление токена бота (только для репетиторов и администраторов)
+            if current_user.role in ['admin', 'tutor']:
+                bot_token = request.form.get('bot_token', '').strip()
+                if bot_token:
+                    current_user.bot_token = bot_token
+                elif 'bot_token' in request.form:  # Если поле есть, но пустое
+                    current_user.bot_token = None
             
             # Смена пароля
             current_password = request.form.get('current_password', '').strip()
@@ -537,6 +541,46 @@ def revoke_user_session(user_id):
             flash('Пользователь не найден', 'error')
     
     return redirect(url_for('admin_security'))
+
+@app.route('/admin/system_settings', methods=['GET', 'POST'])
+@role_required('admin')
+def system_settings():
+    """Системные настройки (только для администраторов)"""
+    with session_scope() as session:
+        if request.method == 'POST':
+            # Обновляем глобальный токен бота в config.py
+            bot_token = request.form.get('bot_token', '').strip()
+            
+            if bot_token:
+                # Записываем токен в файл config.py
+                try:
+                    config_path = os.path.join(os.path.dirname(__file__), 'config.py')
+                    with open(config_path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    
+                    # Заменяем токен в файле
+                    import re
+                    content = re.sub(
+                        r'BOT_TOKEN\s*=\s*["\'][^"\']*["\']',
+                        f'BOT_TOKEN = "{bot_token}"',
+                        content
+                    )
+                    
+                    with open(config_path, 'w', encoding='utf-8') as f:
+                        f.write(content)
+                    
+                    flash('Токен бота обновлен в системных настройках', 'success')
+                    
+                except Exception as e:
+                    flash(f'Ошибка обновления токена: {e}', 'error')
+            
+            return redirect(url_for('system_settings'))
+        
+        # Получаем текущий токен из config
+        import config
+        current_token = getattr(config, 'BOT_TOKEN', '')
+        
+        return render_template('system_settings.html', current_token=current_token)
 
 # ==================== СИСТЕМА КУРСОВ ====================
 
