@@ -1,0 +1,441 @@
+{% extends "base.html" %}
+
+{% block title %}Студенты курса - {{ course.title }} - TutorApp{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="breadcrumb">
+        <a href="{{ url_for('courses_list') }}">📚 Курсы</a>
+        →
+        <a href="{{ url_for('course_detail', course_id=course.id) }}">{{ course.title }}</a>
+        →
+        <span>Управление студентами</span>
+    </div>
+    
+    <div class="course-header">
+        <div class="course-info">
+            <h1>👥 Студенты курса "{{ course.title }}"</h1>
+            <div class="course-stats">
+                <span class="stat-item">
+                    <strong>📊 Записано:</strong> {{ enrollments|length }} студентов
+                </span>
+                <span class="stat-item">
+                    <strong>✅ Активных:</strong> {{ enrollments|selectattr('is_active')|list|length }}
+                </span>
+                <span class="stat-item">
+                    <strong>📅 Создан:</strong> {{ course.created_at.strftime('%d.%m.%Y') }}
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Добавление студентов -->
+{% if available_students %}
+<div class="add-student-section">
+    <h3>➕ Добавить студентов на курс</h3>
+    <form method="POST" action="{{ url_for('add_student_to_course', course_id=course.id) }}" class="add-student-form">
+        <div class="form-row">
+            <select name="student_id" class="form-control" required>
+                <option value="">Выберите студента...</option>
+                {% for student in available_students %}
+                <option value="{{ student.id }}">
+                    {{ student.full_name }} ({{ student.telegram_chat_id if student.telegram_chat_id else 'без Telegram' }})
+                </option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary">
+                ➕ Добавить
+            </button>
+        </div>
+    </form>
+    <p class="form-hint">
+        Показаны только ваши студенты, которые еще не записаны на этот курс
+    </p>
+</div>
+{% endif %}
+
+<!-- Список студентов курса -->
+{% if enrollments %}
+<div class="students-section">
+    <h3>📋 Студенты курса</h3>
+    
+    <div class="students-list">
+        {% for enrollment in enrollments %}
+        <div class="student-card {% if not enrollment.is_active %}inactive{% endif %}">
+            <div class="student-info">
+                <div class="student-avatar">
+                    {% if enrollment.student.full_name %}
+                        {{ enrollment.student.full_name[0].upper() }}
+                    {% else %}
+                        ?
+                    {% endif %}
+                </div>
+                <div class="student-details">
+                    <h4>{{ enrollment.student.full_name or 'Без имени' }}</h4>
+                    <div class="student-meta">
+                        <span>💬 {{ enrollment.student.telegram_chat_id or 'Нет Telegram' }}</span>
+                        <span>📚 Уроков пройдено: {{ enrollment.student.lessons_count or 0 }}</span>
+                        <span>📅 Записан: {{ enrollment.enrolled_at.strftime('%d.%m.%Y') }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="student-progress">
+                <div class="progress-info">
+                    <span class="progress-label">Прогресс:</span>
+                    <span class="progress-value">{{ "%.1f"|format(enrollment.progress_percentage) }}%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {{ enrollment.progress_percentage }}%"></div>
+                </div>
+            </div>
+            
+            <div class="student-status">
+                {% if enrollment.is_active %}
+                    <span class="status-badge active">✅ Активен</span>
+                {% else %}
+                    <span class="status-badge inactive">⏸️ Отключен</span>
+                {% endif %}
+            </div>
+            
+            <div class="student-actions">
+                <form method="POST" action="{{ url_for('toggle_student_access', course_id=course.id, student_id=enrollment.student_id) }}" style="display: inline;">
+                    <button type="submit" class="btn btn-sm btn-outline" 
+                            title="{% if enrollment.is_active %}Отключить доступ{% else %}Включить доступ{% endif %}">
+                        {% if enrollment.is_active %}⏸️{% else %}▶️{% endif %}
+                    </button>
+                </form>
+                
+                <button class="btn btn-sm btn-outline" onclick="viewStudentProgress({{ enrollment.student_id }})" title="Просмотр прогресса">
+                    📊
+                </button>
+                
+                <form method="POST" action="{{ url_for('remove_student_from_course', course_id=course.id, student_id=enrollment.student_id) }}" 
+                      style="display: inline;"
+                      onsubmit="return confirm('Исключить {{ enrollment.student.full_name }} из курса? Все его прогресс будет потерян!')">
+                    <button type="submit" class="btn btn-sm btn-danger" title="Исключить из курса">
+                        🗑️
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">👥</div>
+    <h3>На курс пока никто не записан</h3>
+    <p>Добавьте студентов, чтобы они могли изучать ваш курс</p>
+    {% if available_students %}
+    <p class="empty-hint">У вас есть {{ available_students|length }} студентов, доступных для записи</p>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Панель действий -->
+<div class="actions-panel">
+    <a href="{{ url_for('course_detail', course_id=course.id) }}" class="btn btn-secondary">
+        🔙 К курсу
+    </a>
+    {% if not available_students %}
+    <a href="{{ url_for('add_student') }}" class="btn btn-outline">
+        ➕ Создать нового студента
+    </a>
+    {% endif %}
+    <button class="btn btn-outline" onclick="exportStudentsList()">
+        📤 Экспорт списка
+    </button>
+</div>
+
+<style>
+.breadcrumb {
+    font-size: 0.9em;
+    color: #666;
+    margin-bottom: 2rem;
+}
+
+.breadcrumb a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+.course-header {
+    margin-bottom: 2rem;
+}
+
+.course-info h1 {
+    margin: 0 0 1rem 0;
+    color: var(--primary-color);
+}
+
+.course-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    color: #666;
+    font-size: 0.9em;
+}
+
+.add-student-section {
+    background: white;
+    border: 1px solid #e1e5e9;
+    border-radius: var(--radius);
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.add-student-section h3 {
+    margin: 0 0 1rem 0;
+    color: var(--primary-color);
+}
+
+.add-student-form {
+    margin-bottom: 1rem;
+}
+
+.form-row {
+    display: flex;
+    gap: 1rem;
+    align-items: end;
+}
+
+.form-control {
+    flex: 1;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: var(--radius-sm);
+    font-size: 1rem;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+}
+
+.form-hint {
+    color: #666;
+    font-size: 0.9em;
+    margin: 0;
+}
+
+.students-section {
+    background: white;
+    border: 1px solid #e1e5e9;
+    border-radius: var(--radius);
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.students-section h3 {
+    margin: 0 0 1.5rem 0;
+    color: var(--primary-color);
+}
+
+.students-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.student-card {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    border: 1px solid #e1e5e9;
+    border-radius: var(--radius-sm);
+    background: white;
+    transition: all 0.2s;
+}
+
+.student-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.student-card.inactive {
+    opacity: 0.7;
+    background: #f8f9fa;
+}
+
+.student-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+}
+
+.student-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.2em;
+}
+
+.student-details h4 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+}
+
+.student-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    font-size: 0.9em;
+    color: #666;
+}
+
+.student-progress {
+    min-width: 150px;
+}
+
+.progress-info {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    font-size: 0.9em;
+}
+
+.progress-label {
+    color: #666;
+}
+
+.progress-value {
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #e1e5e9;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--primary-color);
+    transition: width 0.3s;
+}
+
+.student-status {
+    margin: 0 1rem;
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: bold;
+}
+
+.status-badge.active {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-badge.inactive {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.student-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+    border: 1px solid #dc3545;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+    border-color: #bd2130;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #666;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.empty-hint {
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+.actions-panel {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding-top: 2rem;
+    border-top: 2px solid #eee;
+}
+
+@media (max-width: 768px) {
+    .course-stats {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .form-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .student-card {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+    
+    .student-info {
+        justify-content: center;
+        text-align: center;
+    }
+    
+    .student-meta {
+        justify-content: center;
+    }
+    
+    .student-actions {
+        justify-content: center;
+    }
+    
+    .actions-panel {
+        flex-direction: column;
+    }
+}
+</style>
+
+<script>
+function viewStudentProgress(studentId) {
+    alert('Просмотр детального прогресса студента будет доступен позже');
+}
+
+function exportStudentsList() {
+    alert('Экспорт списка студентов будет доступен позже');
+}
+</script>
+{% endblock %}

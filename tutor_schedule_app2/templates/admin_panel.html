@@ -1,67 +1,438 @@
 {% extends "base.html" %}
 
+{% block title %}Администрирование - TutorApp{% endblock %}
+
 {% block content %}
-<h2>Админ-панель</h2>
+<div class="admin-header">
+    <h1>🛠️ Админ-панель</h1>
+    <p>Управление платформой и мониторинг активности</p>
+</div>
 
-<div class="row mb-4">
-    <div class="col-md-4">
-        <div class="card text-center">
-            <div class="card-body">
-                <h5 class="card-title">Студенты</h5>
-                <p class="card-text fs-2">{{ students_count }}</p>
-                <a href="{{ url_for('all_students') }}" class="btn btn-primary">Управление студентами</a>
+<!-- Общая статистика -->
+<div class="stats-overview">
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">👨‍🏫</div>
+            <div class="stat-content">
+                <div class="stat-number">{{ tutors_count }}</div>
+                <div class="stat-label">Репетиторы</div>
             </div>
+            <a href="{{ url_for('admin_tutors') }}" class="stat-link">Управление →</a>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">🎓</div>
+            <div class="stat-content">
+                <div class="stat-number">{{ students_count }}</div>
+                <div class="stat-label">Студенты</div>
+            </div>
+            <a href="#" class="stat-link disabled">Просмотр →</a>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">📚</div>
+            <div class="stat-content">
+                <div class="stat-number">{{ courses_count }}</div>
+                <div class="stat-label">Курсы</div>
+            </div>
+            <a href="{{ url_for('admin_courses') }}" class="stat-link">Управление →</a>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">📋</div>
+            <div class="stat-content">
+                <div class="stat-number">{{ enrollments_count }}</div>
+                <div class="stat-label">Записи на курсы</div>
+            </div>
+            <a href="#" class="stat-link disabled">Просмотр →</a>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">📖</div>
+            <div class="stat-content">
+                <div class="stat-number">{{ lessons_count }}</div>
+                <div class="stat-label">Уроки</div>
+            </div>
+            <a href="#" class="stat-link disabled">Просмотр →</a>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card text-center">
-            <div class="card-body">
-                <h5 class="card-title">Занятия</h5>
-                <p class="card-text fs-2">{{ lessons_count }}</p>
-                <a href="{{ url_for('all_lessons') }}" class="btn btn-primary">Управление занятиями</a>
+</div>
+
+<!-- Последняя активность -->
+<div class="activity-section">
+    <div class="activity-grid">
+        <!-- Новые репетиторы -->
+        <div class="activity-card">
+            <div class="activity-header">
+                <h3>👨‍🏫 Последние репетиторы</h3>
+                <a href="{{ url_for('admin_tutors') }}" class="view-all">Все репетиторы →</a>
+            </div>
+            <div class="activity-list">
+                {% for tutor in recent_tutors %}
+                <div class="activity-item">
+                    <div class="activity-info">
+                        <div class="activity-title">
+                            <a href="{{ url_for('admin_tutor_detail', tutor_id=tutor.id) }}">
+                                {{ tutor.username }}
+                            </a>
+                        </div>
+                        <div class="activity-meta">
+                            {{ tutor.email }} • 
+                            Регистрация: {{ tutor.created_at.strftime('%d.%m.%Y') if tutor.created_at else 'Неизвестно' }}
+                        </div>
+                    </div>
+                    <div class="activity-status">
+                        {% if tutor.is_approved %}
+                            <span class="status-badge approved">✅ Одобрен</span>
+                        {% else %}
+                            <span class="status-badge pending">⏳ Ожидает</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% else %}
+                <div class="empty-activity">
+                    Нет зарегистрированных репетиторов
+                </div>
+                {% endfor %}
             </div>
         </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card text-center">
-            <div class="card-body">
-                <h5 class="card-title">Домашние задания</h5>
-                <p class="card-text fs-2">{{ homeworks_count }}</p>
-                {# Здесь можно добавить ссылку на страницу со всеми ДЗ, если она есть #}
-                {# Или на страницу, где можно просматривать ДЗ для каждого студента #}
-                <a href="{{ url_for('all_students') }}" class="btn btn-primary">Просмотр ДЗ по студентам</a>
+        
+        <!-- Новые курсы -->
+        <div class="activity-card">
+            <div class="activity-header">
+                <h3>📚 Последние курсы</h3>
+                <a href="{{ url_for('admin_courses') }}" class="view-all">Все курсы →</a>
+            </div>
+            <div class="activity-list">
+                {% for course in recent_courses %}
+                <div class="activity-item">
+                    <div class="activity-info">
+                        <div class="activity-title">
+                            <a href="{{ url_for('course_detail', course_id=course.id) }}">
+                                {{ course.title }}
+                            </a>
+                        </div>
+                        <div class="activity-meta">
+                            Создал: 
+                            <a href="{{ url_for('admin_tutor_detail', tutor_id=course.tutor.id) }}">
+                                {{ course.tutor.username }}
+                            </a> • 
+                            {{ course.created_at.strftime('%d.%m.%Y') }}
+                        </div>
+                    </div>
+                    <div class="activity-status">
+                        {% if course.is_published %}
+                            <span class="status-badge published">🌐 Опубликован</span>
+                        {% else %}
+                            <span class="status-badge draft">📝 Черновик</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% else %}
+                <div class="empty-activity">
+                    Нет созданных курсов
+                </div>
+                {% endfor %}
             </div>
         </div>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-6">
-        <h3>Последние занятия</h3>
-        <ul class="list-group">
-            {% for lesson in recent_lessons %}
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    {{ lesson.student.full_name }} - {{ lesson.date_time.strftime('%d.%m.%Y %H:%M') }} ({{ lesson.status }})
-                    <a href="{{ url_for('edit_lesson', lesson_id=lesson.id) }}" class="btn btn-sm btn-outline-primary">Изменить</a>
-                </li>
-            {% else %}
-                <li class="list-group-item">Нет недавних занятий.</li>
-            {% endfor %}
-        </ul>
-    </div>
-    <div class="col-md-6">
-        <h3>Последние домашние задания</h3>
-        <ul class="list-group">
-            {% for homework in recent_homeworks %}
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    {{ homework.student.full_name }} - "{{ homework.description }}" (Срок: {{ homework.due_date.strftime('%d.%m.%Y') if homework.due_date else 'Не указан' }}) - {{ 'Выполнено' if homework.is_completed else 'Не выполнено' }}
-                    <a href="{{ url_for('edit_homework', homework_id=homework.id) }}" class="btn btn-sm btn-outline-primary">Изменить</a>
-                </li>
-            {% else %}
-                <li class="list-group-item">Нет недавних домашних заданий.</li>
-            {% endfor %}
-        </ul>
+<!-- Быстрые действия -->
+<div class="quick-actions">
+    <h3>⚡ Быстрые действия</h3>
+    <div class="actions-grid">
+        <a href="{{ url_for('admin_tutors') }}" class="action-card">
+            <div class="action-icon">👨‍🏫</div>
+            <div class="action-title">Управление репетиторами</div>
+            <div class="action-description">Одобрение, блокировка, просмотр статистики</div>
+        </a>
+        
+        <a href="{{ url_for('admin_courses') }}" class="action-card">
+            <div class="action-icon">📚</div>
+            <div class="action-title">Управление курсами</div>
+            <div class="action-description">Просмотр, модерация курсов</div>
+        </a>
+        
+        <div class="action-card disabled">
+            <div class="action-icon">📊</div>
+            <div class="action-title">Аналитика (скоро)</div>
+            <div class="action-description">Подробная статистика и отчеты</div>
+        </div>
+        
+        <div class="action-card disabled">
+            <div class="action-icon">⚙️</div>
+            <div class="action-title">Настройки (скоро)</div>
+            <div class="action-description">Конфигурация платформы</div>
+        </div>
     </div>
 </div>
 
+<style>
+.admin-header {
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.admin-header h1 {
+    margin: 0 0 0.5rem 0;
+    color: var(--primary-color);
+}
+
+.admin-header p {
+    color: #666;
+    font-size: 1.1em;
+}
+
+.stats-overview {
+    margin-bottom: 3rem;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.stat-card {
+    background: white;
+    border: 1px solid #e1e5e9;
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.2s;
+    position: relative;
+}
+
+.stat-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+
+.stat-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.stat-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    color: #666;
+    font-weight: 500;
+    margin-bottom: 1rem;
+}
+
+.stat-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.9em;
+}
+
+.stat-link.disabled {
+    color: #ccc;
+    cursor: not-allowed;
+}
+
+.stat-link:hover:not(.disabled) {
+    text-decoration: underline;
+}
+
+.activity-section {
+    margin-bottom: 3rem;
+}
+
+.activity-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 2rem;
+}
+
+.activity-card {
+    background: white;
+    border: 1px solid #e1e5e9;
+    border-radius: var(--radius);
+    padding: 1.5rem;
+}
+
+.activity-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #eee;
+}
+
+.activity-header h3 {
+    margin: 0;
+    color: var(--primary-color);
+}
+
+.view-all {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.9em;
+}
+
+.view-all:hover {
+    text-decoration: underline;
+}
+
+.activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.activity-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: var(--radius-sm);
+}
+
+.activity-info {
+    flex: 1;
+}
+
+.activity-title a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.activity-title a:hover {
+    text-decoration: underline;
+}
+
+.activity-meta {
+    font-size: 0.9em;
+    color: #666;
+    margin-top: 0.25rem;
+}
+
+.activity-meta a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.activity-meta a:hover {
+    text-decoration: underline;
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.status-badge.approved {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-badge.pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-badge.published {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.status-badge.draft {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.empty-activity {
+    text-align: center;
+    color: #666;
+    font-style: italic;
+    padding: 2rem;
+}
+
+.quick-actions h3 {
+    margin: 0 0 1.5rem 0;
+    color: var(--primary-color);
+}
+
+.actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.action-card {
+    display: block;
+    background: white;
+    border: 1px solid #e1e5e9;
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s;
+}
+
+.action-card:hover:not(.disabled) {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+    text-decoration: none;
+    color: inherit;
+}
+
+.action-card.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.action-icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+.action-title {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--primary-color);
+}
+
+.action-description {
+    font-size: 0.9em;
+    color: #666;
+    line-height: 1.4;
+}
+
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .activity-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .activity-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+    
+    .actions-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
 {% endblock %}

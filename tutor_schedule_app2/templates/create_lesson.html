@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+
+{% block title %}Создать урок - {{ module.title }} - TutorApp{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>➕ Создать урок</h2>
+        <div class="breadcrumb">
+            <a href="{{ url_for('course_detail', course_id=course.id) }}">{{ course.title }}</a>
+            →
+            <span>{{ module.title }}</span>
+            →
+            <span>Новый урок</span>
+        </div>
+    </div>
+    
+    <form method="POST" class="auth-form">
+        <div class="form-group">
+            <label for="title">📖 Название урока *</label>
+            <input type="text" id="title" name="title" required
+                   placeholder="Например: Введение в переменные"
+                   maxlength="200">
+            <small class="form-text">Краткое и понятное название урока</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="content">📝 Содержание урока</label>
+            <textarea id="content" name="content" rows="12"
+                      placeholder="Напишите содержание урока. Вы можете использовать простую разметку:
+
+**Жирный текст**
+*Курсив*
+
+# Заголовок 1
+## Заголовок 2
+
+- Список
+- элементов
+
+1. Нумерованный
+2. список
+
+Код: `переменная = значение`
+
+Блок кода:
+```
+print('Привет, мир!')
+```
+
+Ссылка: [текст](адрес)"></textarea>
+            <small class="form-text">Подробное описание урока с примерами и пояснениями</small>
+        </div>
+        
+        <div class="info-box">
+            <h4>💡 После создания урока вы сможете:</h4>
+            <ul>
+                <li>📎 Загрузить материалы (презентации, изображения, документы)</li>
+                <li>📝 Создать задания для студентов</li>
+                <li>✏️ Редактировать содержание урока</li>
+                <li>👥 Увидеть, кто изучил урок</li>
+            </ul>
+        </div>
+        
+        <div class="preview-box" style="display: none;">
+            <h4>👁️ Предварительный просмотр:</h4>
+            <div id="content-preview"></div>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+                ✅ Создать урок
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="togglePreview()">
+                👁️ Предпросмотр
+            </button>
+            <a href="{{ url_for('course_detail', course_id=course.id) }}" class="btn btn-outline">
+                ❌ Отмена
+            </a>
+        </div>
+    </form>
+</div>
+
+<style>
+.breadcrumb {
+    font-size: 0.9em;
+    color: #666;
+    margin-top: 0.5rem;
+}
+
+.breadcrumb a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+.info-box {
+    background: linear-gradient(135deg, #f8f9ff, #e8f2ff);
+    border: 1px solid #c3d9ff;
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin: 2rem 0;
+}
+
+.info-box h4 {
+    margin: 0 0 1rem 0;
+    color: var(--primary-color);
+}
+
+.info-box ul {
+    margin: 0;
+    padding-left: 1.5rem;
+}
+
+.info-box li {
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+}
+
+.preview-box {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin: 2rem 0;
+}
+
+.preview-box h4 {
+    margin: 0 0 1rem 0;
+    color: #333;
+}
+
+#content-preview {
+    background: white;
+    padding: 1rem;
+    border-radius: var(--radius-sm);
+    min-height: 100px;
+    line-height: 1.6;
+}
+
+#content-preview h1, #content-preview h2, #content-preview h3 {
+    color: var(--primary-color);
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+#content-preview h1:first-child, 
+#content-preview h2:first-child, 
+#content-preview h3:first-child {
+    margin-top: 0;
+}
+
+#content-preview code {
+    background: #f1f3f4;
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+}
+
+#content-preview pre {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: var(--radius-sm);
+    overflow-x: auto;
+    margin: 1rem 0;
+}
+
+#content-preview pre code {
+    background: none;
+    padding: 0;
+}
+
+#content-preview ul, #content-preview ol {
+    margin: 1rem 0;
+    padding-left: 2rem;
+}
+
+#content-preview li {
+    margin-bottom: 0.5rem;
+}
+
+#content-preview a {
+    color: var(--primary-color);
+}
+
+.form-group textarea {
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    line-height: 1.5;
+}
+
+.card-header h2 {
+    margin: 0;
+}
+</style>
+
+<script>
+function togglePreview() {
+    const content = document.getElementById('content').value;
+    const previewBox = document.querySelector('.preview-box');
+    const previewDiv = document.getElementById('content-preview');
+    
+    if (previewBox.style.display === 'none') {
+        // Показываем предпросмотр
+        previewDiv.innerHTML = formatContent(content);
+        previewBox.style.display = 'block';
+        previewBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+        // Скрываем предпросмотр
+        previewBox.style.display = 'none';
+    }
+}
+
+function formatContent(text) {
+    if (!text.trim()) {
+        return '<p class="text-muted">Содержание урока будет отображено здесь...</p>';
+    }
+    
+    // Простая обработка Markdown-подобного синтаксиса
+    let html = text
+        // Заголовки
+        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+        // Жирный и курсив
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        // Код
+        .replace(/`([^`]*)`/g, '<code>$1</code>')
+        // Ссылки
+        .replace(/\[([^\]]*)\]\(([^)]*)\)/g, '<a href="$2" target="_blank">$1</a>')
+        // Переводы строк
+        .replace(/\n\n/g, '</p><p>')
+        .replace(/\n/g, '<br>');
+    
+    // Блоки кода
+    html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+    
+    // Списки
+    html = html.replace(/^\s*[-*+]\s+(.*$)/gim, '<li>$1</li>');
+    html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+    
+    html = html.replace(/^\s*\d+\.\s+(.*$)/gim, '<li>$1</li>');
+    html = html.replace(/(<li>.*<\/li>)/s, '<ol>$1</ol>');
+    
+    // Оборачиваем в параграфы
+    if (!html.startsWith('<')) {
+        html = '<p>' + html + '</p>';
+    }
+    
+    return html;
+}
+
+// Автосохранение в localStorage
+document.addEventListener('DOMContentLoaded', function() {
+    const titleInput = document.getElementById('title');
+    const contentTextarea = document.getElementById('content');
+    
+    // Загружаем сохраненные данные
+    const savedTitle = localStorage.getItem('lesson_title');
+    const savedContent = localStorage.getItem('lesson_content');
+    
+    if (savedTitle) titleInput.value = savedTitle;
+    if (savedContent) contentTextarea.value = savedContent;
+    
+    // Сохраняем при изменении
+    titleInput.addEventListener('input', function() {
+        localStorage.setItem('lesson_title', this.value);
+    });
+    
+    contentTextarea.addEventListener('input', function() {
+        localStorage.setItem('lesson_content', this.value);
+    });
+    
+    // Очищаем после отправки формы
+    document.querySelector('form').addEventListener('submit', function() {
+        localStorage.removeItem('lesson_title');
+        localStorage.removeItem('lesson_content');
+    });
+});
+</script>
+{% endblock %}

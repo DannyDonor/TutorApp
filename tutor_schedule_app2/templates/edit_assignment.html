@@ -1,0 +1,399 @@
+{% extends "base.html" %}
+
+{% block title %}Редактировать задание - {{ lesson.title }} - TutorApp{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="breadcrumb">
+        <a href="{{ url_for('course_detail', course_id=course.id) }}">📚 {{ course.title }}</a>
+        →
+        <span>{{ module.title }}</span>
+        →
+        <a href="{{ url_for('lesson_detail', lesson_id=lesson.id) }}">{{ lesson.title }}</a>
+        →
+        <span>Редактировать задание</span>
+    </div>
+    
+    <h1>✏️ Редактировать задание</h1>
+    <p class="form-description">Измените параметры задания "{{ assignment.title }}"</p>
+    
+    <form method="POST" class="form-container">
+        <div class="form-group">
+            <label for="title">Название задания *</label>
+            <input type="text" 
+                   id="title" 
+                   name="title" 
+                   class="form-control"
+                   value="{{ assignment.title }}"
+                   placeholder="Введите название задания..."
+                   required>
+            <small class="form-hint">Краткое и понятное название задания</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="description">Описание задания *</label>
+            <textarea id="description" 
+                      name="description" 
+                      class="form-control" 
+                      rows="8" 
+                      placeholder="Подробно опишите, что должен сделать студент..."
+                      required>{{ assignment.description }}</textarea>
+            <small class="form-hint">
+                Четко опишите требования к выполнению задания. 
+                Поддерживается HTML форматирование.
+            </small>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="assignment_type">Тип задания</label>
+                <select id="assignment_type" name="assignment_type" class="form-control">
+                    <option value="text" {% if assignment.assignment_type == 'text' %}selected{% endif %}>📝 Текстовый ответ</option>
+                    <option value="file" {% if assignment.assignment_type == 'file' %}selected{% endif %}>📎 Загрузка файла</option>
+                    <option value="quiz" {% if assignment.assignment_type == 'quiz' %}selected{% endif %}>❓ Тест/Опрос</option>
+                </select>
+                <small class="form-hint">Выберите, как студент должен выполнить задание</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="max_points">Максимальные баллы</label>
+                <input type="number" 
+                       id="max_points" 
+                       name="max_points" 
+                       class="form-control"
+                       value="{{ assignment.max_points }}"
+                       min="1"
+                       max="1000">
+                <small class="form-hint">Максимальное количество баллов за задание</small>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <div class="checkbox-container">
+                <input type="checkbox" id="is_required" name="is_required" {% if assignment.is_required %}checked{% endif %}>
+                <label for="is_required" class="checkbox-label">
+                    ⚠️ Обязательное задание
+                </label>
+            </div>
+            <small class="form-hint">Обязательные задания влияют на общий прогресс курса</small>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+                💾 Сохранить изменения
+            </button>
+            <a href="{{ url_for('lesson_detail', lesson_id=lesson.id) }}" class="btn btn-secondary">
+                ❌ Отмена
+            </a>
+        </div>
+    </form>
+    
+    <div class="danger-zone">
+        <h3>⚠️ Опасная зона</h3>
+        <p>Удаление задания также удалит все ответы студентов. Это действие нельзя отменить.</p>
+        <form method="POST" action="{{ url_for('delete_assignment', assignment_id=assignment.id) }}" 
+              onsubmit="return confirm('Вы уверены, что хотите удалить это задание? Все ответы студентов будут потеряны!')">
+            <button type="submit" class="btn btn-danger">
+                🗑️ Удалить задание
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="assignment-info">
+    <h3>📊 Статистика задания</h3>
+    <div class="stats-grid">
+        <div class="stat-item">
+            <div class="stat-number">{{ assignment.submissions|length }}</div>
+            <div class="stat-label">Ответов получено</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">{{ assignment.submissions|selectattr('is_checked')|list|length }}</div>
+            <div class="stat-label">Проверено</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">{{ assignment.max_points }}</div>
+            <div class="stat-label">Макс. баллов</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">{% if assignment.is_required %}Да{% else %}Нет{% endif %}</div>
+            <div class="stat-label">Обязательное</div>
+        </div>
+    </div>
+    
+    {% if assignment.submissions %}
+    <div class="submissions-section">
+        <h4>📝 Последние ответы</h4>
+        <div class="submissions-list">
+            {% for submission in assignment.submissions[:5] %}
+            <div class="submission-item">
+                <div class="submission-info">
+                    <strong>{{ submission.enrollment.student.name }}</strong>
+                    <span class="submission-date">{{ submission.submitted_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                </div>
+                <div class="submission-status">
+                    {% if submission.is_checked %}
+                        <span class="badge badge-checked">✅ Проверено ({{ submission.points or 0 }}/{{ assignment.max_points }})</span>
+                    {% else %}
+                        <span class="badge badge-pending">⏳ Ожидает проверки</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        {% if assignment.submissions|length > 5 %}
+        <p class="show-more">
+            <a href="#" onclick="alert('Просмотр всех ответов будет доступен позже')">
+                Показать все {{ assignment.submissions|length }} ответов →
+            </a>
+        </p>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.breadcrumb {
+    font-size: 0.9em;
+    color: #666;
+    margin-bottom: 2rem;
+}
+
+.breadcrumb a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+.form-description {
+    color: #666;
+    margin-bottom: 2rem;
+}
+
+.form-container {
+    background: white;
+    padding: 2rem;
+    border-radius: var(--radius);
+    border: 1px solid #e1e5e9;
+    margin-bottom: 2rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: var(--radius-sm);
+    font-size: 1rem;
+    transition: border-color 0.2s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+}
+
+.form-hint {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.85em;
+    color: #666;
+}
+
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.checkbox-label {
+    font-weight: 500;
+    color: #333;
+    cursor: pointer;
+    margin-bottom: 0;
+}
+
+input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+}
+
+.danger-zone {
+    background: white;
+    padding: 2rem;
+    border-radius: var(--radius);
+    border: 1px solid #dc3545;
+    margin-bottom: 2rem;
+}
+
+.danger-zone h3 {
+    margin: 0 0 1rem 0;
+    color: #dc3545;
+}
+
+.danger-zone p {
+    color: #666;
+    margin-bottom: 1rem;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+    border: 1px solid #dc3545;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+    border-color: #bd2130;
+}
+
+.assignment-info {
+    background: white;
+    padding: 2rem;
+    border-radius: var(--radius);
+    border: 1px solid #e1e5e9;
+}
+
+.assignment-info h3 {
+    margin: 0 0 1.5rem 0;
+    color: var(--primary-color);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: var(--radius-sm);
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    font-size: 0.9em;
+    color: #666;
+}
+
+.submissions-section h4 {
+    margin: 0 0 1rem 0;
+    color: #333;
+}
+
+.submissions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.submission-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: var(--radius-sm);
+    border-left: 3px solid var(--primary-color);
+}
+
+.submission-info strong {
+    color: #333;
+}
+
+.submission-date {
+    color: #666;
+    font-size: 0.9em;
+    margin-left: 0.5rem;
+}
+
+.badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: bold;
+}
+
+.badge-checked {
+    background: #d4edda;
+    color: #155724;
+}
+
+.badge-pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.show-more {
+    margin-top: 1rem;
+    text-align: center;
+}
+
+.show-more a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.show-more a:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .submission-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+}
+</style>
+{% endblock %}

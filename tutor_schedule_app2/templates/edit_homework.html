@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Редактировать домашнее задание - TutorApp{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>📝 Редактировать домашнее задание для {{ homework.student.full_name }}</h2>
+    </div>
+    
+    <form method="POST" class="auth-form">
+        <div class="form-group">
+            <label for="description">Описание задания:</label>
+            <textarea id="description" name="description" required rows="4">{{ request.form.description or homework.description }}</textarea>
+        </div>
+        
+        <div class="form-group">
+            <label for="due_date">Срок выполнения:</label>
+            <input type="date" id="due_date" name="due_date" 
+                   value="{{ request.form.due_date or (homework.due_date.strftime('%Y-%m-%d') if homework.due_date else '') }}">
+        </div>
+        
+        <div class="homework-info">
+            <h3>Информация о задании:</h3>
+            
+            {% if homework.submitted_date %}
+            <p><strong>📤 Отправлено студентом:</strong> {{ homework.submitted_date.strftime('%d.%m.%Y %H:%M') }}</p>
+            {% endif %}
+            
+            {% if homework.student_comment %}
+            <div class="student-comment">
+                <strong>💬 Комментарий студента:</strong>
+                <p>{{ homework.student_comment }}</p>
+            </div>
+            {% endif %}
+            
+            <p><strong>📊 Статус:</strong> 
+                {% if homework.is_confirmed_by_tutor %}
+                    <span class="status-badge status-completed">✅ Подтверждено</span>
+                {% elif homework.submitted_date %}
+                    <span class="status-badge status-pending">⏳ Ожидает проверки</span>
+                {% elif homework.is_completed %}
+                    <span class="status-badge status-completed">✅ Выполнено</span>
+                {% else %}
+                    <span class="status-badge status-scheduled">📋 Не выполнено</span>
+                {% endif %}
+            </p>
+        </div>
+        
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">💾 Сохранить изменения</button>
+            <a href="{{ url_for('students_homeworks', student_id=homework.student_id) }}" class="btn btn-secondary">❌ Отмена</a>
+        </div>
+    </form>
+</div>
+
+<style>
+.homework-info {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: var(--radius-sm);
+    margin: 1rem 0;
+    border-left: 4px solid #007bff;
+}
+
+.student-comment {
+    background: #e3f2fd;
+    padding: 1rem;
+    border-radius: var(--radius-sm);
+    margin: 1rem 0;
+    border-left: 4px solid #2196f3;
+}
+
+.student-comment p {
+    margin: 0.5rem 0 0 0;
+    white-space: pre-wrap;
+    font-style: italic;
+}
+
+.status-pending {
+    background: #ff9800;
+    color: white;
+}
+</style>
+{% endblock %}

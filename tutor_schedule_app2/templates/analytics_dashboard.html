@@ -1,0 +1,351 @@
+{% extends "base.html" %}
+
+{% block title %}Аналитика - TutorApp{% endblock %}
+
+{% block content %}
+<div class="analytics-header">
+    <h1>📊 Аналитика и статистика</h1>
+    <p>Подробная статистика по студентам, курсам и заданиям</p>
+</div>
+
+<!-- Основная статистика -->
+<div class="stats-grid">
+    <div class="stat-card primary">
+        <div class="stat-icon">🎓</div>
+        <div class="stat-content">
+            <div class="stat-number">{{ stats.total_courses }}</div>
+            <div class="stat-label">Курсов</div>
+        </div>
+    </div>
+    
+    <div class="stat-card success">
+        <div class="stat-icon">👥</div>
+        <div class="stat-content">
+            <div class="stat-number">{{ stats.total_students }}</div>
+            <div class="stat-label">Студентов</div>
+        </div>
+    </div>
+    
+    {% if session.role == 'admin' %}
+    <div class="stat-card info">
+        <div class="stat-icon">👨‍🏫</div>
+        <div class="stat-content">
+            <div class="stat-number">{{ stats.total_tutors }}</div>
+            <div class="stat-label">Репетиторов</div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <div class="stat-card warning">
+        <div class="stat-icon">📚</div>
+        <div class="stat-content">
+            <div class="stat-number">{{ stats.total_enrollments }}</div>
+            <div class="stat-label">Записей на курсы</div>
+        </div>
+    </div>
+</div>
+
+<!-- Статистика по заданиям -->
+<div class="assignments-stats">
+    <h3>📝 Статистика заданий</h3>
+    <div class="stats-grid">
+        <div class="stat-card pending">
+            <div class="stat-icon">⏳</div>
+            <div class="stat-content">
+                <div class="stat-number">{{ stats.pending_submissions }}</div>
+                <div class="stat-label">На проверке</div>
+            </div>
+        </div>
+        
+        <div class="stat-card approved">
+            <div class="stat-icon">✅</div>
+            <div class="stat-content">
+                <div class="stat-number">{{ stats.approved_submissions }}</div>
+                <div class="stat-label">Одобрено</div>
+            </div>
+        </div>
+        
+        <div class="stat-card rejected">
+            <div class="stat-icon">❌</div>
+            <div class="stat-content">
+                <div class="stat-number">{{ stats.rejected_submissions }}</div>
+                <div class="stat-label">Отклонено</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Популярные курсы -->
+{% if popular_courses %}
+<div class="popular-courses">
+    <h3>🏆 Популярные курсы</h3>
+    <div class="courses-table">
+        <table class="analytics-table">
+            <thead>
+                <tr>
+                    <th>Курс</th>
+                    <th>Репетитор</th>
+                    <th>Студентов</th>
+                    <th>Популярность</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for course, enrollment_count in popular_courses %}
+                <tr>
+                    <td>
+                        <div class="course-name">{{ course.title }}</div>
+                        <div class="course-description">{{ course.description[:50] }}...</div>
+                    </td>
+                    <td>{{ course.tutor.username }}</td>
+                    <td>
+                        <span class="enrollment-count">{{ enrollment_count }}</span>
+                    </td>
+                    <td>
+                        <div class="popularity-bar">
+                            <div class="popularity-fill" style="width: {{ (enrollment_count / popular_courses[0][1] * 100) if popular_courses else 0 }}%"></div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Навигация по аналитике -->
+<div class="analytics-navigation">
+    <h3>🔍 Детальная аналитика</h3>
+    <div class="nav-cards">
+        <a href="{{ url_for('student_analytics') }}" class="nav-card">
+            <div class="nav-icon">👥</div>
+            <div class="nav-content">
+                <h4>Аналитика студентов</h4>
+                <p>Прогресс, успеваемость, статистика заданий</p>
+            </div>
+        </a>
+        
+        <a href="{{ url_for('course_analytics') }}" class="nav-card">
+            <div class="nav-icon">🎓</div>
+            <div class="nav-content">
+                <h4>Аналитика курсов</h4>
+                <p>Популярность, завершаемость, эффективность</p>
+            </div>
+        </a>
+        
+        {% if session.role == 'admin' %}
+        <a href="{{ url_for('backup_dashboard') }}" class="nav-card">
+            <div class="nav-icon">💾</div>
+            <div class="nav-content">
+                <h4>Резервные копии</h4>
+                <p>Создание и восстановление бэкапов</p>
+            </div>
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.analytics-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.analytics-header h1 {
+    margin: 0 0 0.5rem 0;
+    color: var(--primary-color);
+}
+
+.analytics-header p {
+    color: #666;
+    margin: 0;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: var(--shadow-sm);
+    border-left: 4px solid transparent;
+}
+
+.stat-card.primary { border-left-color: var(--primary-color); }
+.stat-card.success { border-left-color: var(--success-color); }
+.stat-card.info { border-left-color: var(--accent-color); }
+.stat-card.warning { border-left-color: var(--warning-color); }
+.stat-card.pending { border-left-color: #fbbf24; }
+.stat-card.approved { border-left-color: var(--success-color); }
+.stat-card.rejected { border-left-color: var(--danger-color); }
+
+.stat-icon {
+    font-size: 2rem;
+    opacity: 0.8;
+}
+
+.stat-content {
+    flex: 1;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #333;
+    line-height: 1;
+}
+
+.stat-label {
+    color: #666;
+    font-size: 0.9rem;
+    margin-top: 0.25rem;
+}
+
+.assignments-stats, .popular-courses {
+    background: white;
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.assignments-stats h3, .popular-courses h3 {
+    margin: 0 0 1.5rem 0;
+    color: var(--primary-color);
+}
+
+.analytics-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.analytics-table th,
+.analytics-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e1e5e9;
+}
+
+.analytics-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #333;
+}
+
+.course-name {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.25rem;
+}
+
+.course-description {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.enrollment-count {
+    background: var(--primary-color);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.popularity-bar {
+    width: 100px;
+    height: 8px;
+    background: #e1e5e9;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.popularity-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+    transition: width 0.3s;
+}
+
+.analytics-navigation {
+    background: white;
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.analytics-navigation h3 {
+    margin: 0 0 1.5rem 0;
+    color: var(--primary-color);
+}
+
+.nav-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.nav-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s;
+    border: 1px solid #e1e5e9;
+}
+
+.nav-card:hover {
+    background: white;
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+    text-decoration: none;
+    color: inherit;
+}
+
+.nav-icon {
+    font-size: 2.5rem;
+    opacity: 0.8;
+}
+
+.nav-content h4 {
+    margin: 0 0 0.5rem 0;
+    color: var(--primary-color);
+}
+
+.nav-content p {
+    margin: 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .nav-cards {
+        grid-template-columns: 1fr;
+    }
+    
+    .analytics-table {
+        font-size: 0.9rem;
+    }
+    
+    .analytics-table th,
+    .analytics-table td {
+        padding: 0.75rem 0.5rem;
+    }
+}
+</style>
+{% endblock %}

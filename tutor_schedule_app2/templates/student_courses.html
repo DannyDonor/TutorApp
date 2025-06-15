@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block title %}Мои курсы - TutorApp{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>📚 Мои курсы</h1>
+    <p>Курсы, на которые вы записаны</p>
+</div>
+
+{% if enrollments %}
+<div class="courses-grid">
+    {% for enrollment in enrollments %}
+    <div class="course-card">
+        <div class="course-header">
+            <h3>
+                <a href="{{ url_for('student_course_detail', course_id=enrollment.course.id) }}">
+                    {{ enrollment.course.title }}
+                </a>
+            </h3>
+            <div class="course-status">
+                {% if enrollment.progress_percentage >= 100 %}
+                    <span class="status-badge completed">✅ Завершен</span>
+                {% elif enrollment.progress_percentage > 0 %}
+                    <span class="status-badge in-progress">📚 Изучаю</span>
+                {% else %}
+                    <span class="status-badge new">🆕 Новый</span>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="course-description">
+            {{ enrollment.course.description[:120] }}{% if enrollment.course.description|length > 120 %}...{% endif %}
+        </div>
+        
+        <div class="course-progress">
+            <div class="progress-info">
+                <span class="progress-label">Прогресс:</span>
+                <span class="progress-value">{{ "%.1f"|format(enrollment.progress_percentage) }}%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: {{ enrollment.progress_percentage }}%"></div>
+            </div>
+        </div>
+        
+        <div class="course-meta">
+            <div class="meta-item">
+                <span class="meta-label">👨‍🏫 Репетитор:</span>
+                <span class="meta-value">{{ enrollment.course.tutor.username }}</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">📅 Записан:</span>
+                <span class="meta-value">{{ enrollment.enrolled_at.strftime('%d.%m.%Y') }}</span>
+            </div>
+            {% if enrollment.current_lesson %}
+            <div class="meta-item">
+                <span class="meta-label">📖 Текущий урок:</span>
+                <span class="meta-value">{{ enrollment.current_lesson.title }}</span>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="course-actions">
+            <a href="{{ url_for('student_course_detail', course_id=enrollment.course.id) }}" 
+               class="btn btn-primary">
+                {% if enrollment.progress_percentage >= 100 %}
+                    📖 Повторить
+                {% elif enrollment.progress_percentage > 0 %}
+                    ▶️ Продолжить
+                {% else %}
+                    🚀 Начать изучение
+                {% endif %}
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">📚</div>
+    <h3>У вас пока нет курсов</h3>
+    <p>Курсы появятся здесь, когда репетитор добавит вас на курс</p>
+</div>
+{% endif %}
+
+<style>
+.page-header {
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.page-header h1 {
+    margin: 0 0 0.5rem 0;
+    color: var(--primary-color);
+}
+
+.page-header p {
+    color: #666;
+    margin: 0;
+}
+
+.courses-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.course-card {
+    background: white;
+    border: 1px solid #e1e5e9;
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.course-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+
+.course-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.course-header h3 {
+    margin: 0;
+    flex: 1;
+}
+
+.course-header h3 a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-size: 1.2em;
+}
+
+.course-header h3 a:hover {
+    text-decoration: underline;
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.status-badge.completed {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-badge.in-progress {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.status-badge.new {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.course-description {
+    color: #666;
+    line-height: 1.5;
+    flex: 1;
+}
+
+.course-progress {
+    margin: 1rem 0;
+}
+
+.progress-info {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    font-size: 0.9em;
+}
+
+.progress-label {
+    color: #666;
+}
+
+.progress-value {
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #e1e5e9;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+    transition: width 0.3s;
+}
+
+.course-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-size: 0.9em;
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.meta-label {
+    color: #666;
+    font-weight: 500;
+}
+
+.meta-value {
+    color: #333;
+}
+
+.course-actions {
+    margin-top: 1rem;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #666;
+    grid-column: 1 / -1;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+    .courses-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+    
+    .course-header {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .course-meta {
+        font-size: 0.8em;
+    }
+}
+</style>
+{% endblock %}

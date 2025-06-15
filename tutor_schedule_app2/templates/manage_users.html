@@ -20,6 +20,7 @@
                 <th>Email</th>
                 <th>Роль</th>
                 <th>Статус</th>
+                <th>Разрешения</th>
                 <th>Дата создания</th>
                 <th>Связанный студент</th>
                 <th>Действия</th>
@@ -46,6 +47,21 @@
                         {% if user.is_active %}Активен{% else %}Заблокирован{% endif %}
                     </span>
                 </td>
+                <td>
+                    {% if user.role == 'tutor' %}
+                        <div class="permissions-info">
+                            {% if user.can_create_courses %}
+                                <span class="permission-badge granted">✅ Создание курсов</span>
+                            {% else %}
+                                <span class="permission-badge denied">❌ Создание курсов</span>
+                            {% endif %}
+                        </div>
+                    {% elif user.role == 'admin' %}
+                        <span class="permission-badge admin">👑 Полные права</span>
+                    {% else %}
+                        <span class="permission-badge student">👤 Студент</span>
+                    {% endif %}
+                </td>
                 <td>{{ user.created_at.strftime('%d.%m.%Y') }}</td>
                 <td>
                     {% if user.student %}
@@ -55,17 +71,36 @@
                     {% endif %}
                 </td>
                 <td>
-                    <div class="d-flex gap-2">
-                        <a href="{{ url_for('edit_user', user_id=user.id) }}" class="btn btn-secondary">Редактировать</a>
+                    <div class="user-actions">
+                        <a href="{{ url_for('edit_user', user_id=user.id) }}" class="btn btn-sm btn-secondary">
+                            ✏️ Редактировать
+                        </a>
+                        
+                        {% if user.role == 'tutor' %}
+                        <form method="POST" action="{{ url_for('toggle_course_permission', user_id=user.id) }}" style="display: inline;">
+                            {% if user.can_create_courses %}
+                            <button type="submit" class="btn btn-sm btn-warning" 
+                                    onclick="return confirm('Отозвать разрешение на создание курсов?')">
+                                🚫 Отозвать курсы
+                            </button>
+                            {% else %}
+                            <button type="submit" class="btn btn-sm btn-success"
+                                    onclick="return confirm('Предоставить разрешение на создание курсов?')">
+                                ✅ Разрешить курсы
+                            </button>
+                            {% endif %}
+                        </form>
+                        {% endif %}
+                        
                         {% if user.is_active %}
                             <a href="{{ url_for('toggle_user_status', user_id=user.id) }}" 
-                               class="btn btn-danger" onclick="return confirm('Заблокировать пользователя?')">
-                                Заблокировать
+                               class="btn btn-sm btn-danger" onclick="return confirm('Заблокировать пользователя?')">
+                                🔒 Заблокировать
                             </a>
                         {% else %}
                             <a href="{{ url_for('toggle_user_status', user_id=user.id) }}" 
-                               class="btn btn-primary" onclick="return confirm('Разблокировать пользователя?')">
-                                Разблокировать
+                               class="btn btn-sm btn-primary" onclick="return confirm('Разблокировать пользователя?')">
+                                🔓 Разблокировать
                             </a>
                         {% endif %}
                         {% if user.role != 'admin' %}
@@ -86,4 +121,79 @@
     </div>
     {% endif %}
 </div>
+
+<style>
+.permissions-info {
+    margin: 0;
+}
+
+.permission-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.permission-badge.granted {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+
+.permission-badge.denied {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+}
+
+.permission-badge.admin {
+    background: #ede9fe;
+    color: #5b21b6;
+    border: 1px solid #c4b5fd;
+}
+
+.permission-badge.student {
+    background: #e0f2fe;
+    color: #0c4a6e;
+    border: 1px solid #7dd3fc;
+}
+
+.user-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.user-actions .btn {
+    white-space: nowrap;
+}
+
+.user-actions form {
+    display: inline;
+}
+
+@media (max-width: 768px) {
+    .user-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .user-actions .btn {
+        width: 100%;
+        text-align: center;
+    }
+    
+    .table {
+        font-size: 0.9rem;
+    }
+    
+    .table th,
+    .table td {
+        padding: 0.5rem 0.25rem;
+    }
+}
+</style>
 {% endblock %}

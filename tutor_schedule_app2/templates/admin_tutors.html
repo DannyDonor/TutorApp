@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+
+{% block title %}Управление репетиторами - TutorApp{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="breadcrumb">
+        <a href="{{ url_for('admin_panel') }}">🛠️ Админ-панель</a>
+        →
+        <span>Репетиторы</span>
+    </div>
+    
+    <h1>👨‍🏫 Управление репетиторами</h1>
+    <p>Всего репетиторов: {{ tutors_data|length }}</p>
+</div>
+
+{% if tutors_data %}
+<div class="tutors-list">
+    {% for item in tutors_data %}
+    <div class="tutor-card {% if not item.tutor.is_approved %}pending{% endif %}">
+        <div class="tutor-info">
+            <div class="tutor-avatar">
+                {{ item.tutor.username[0].upper() }}
+            </div>
+            <div class="tutor-details">
+                <h3>
+                    <a href="{{ url_for('admin_tutor_detail', tutor_id=item.tutor.id) }}">
+                        {{ item.tutor.username }}
+                    </a>
+                </h3>
+                <div class="tutor-meta">
+                    <span>📧 {{ item.tutor.email }}</span>
+                    <span>📅 Регистрация: {{ item.tutor.created_at.strftime('%d.%m.%Y') if item.tutor.created_at else 'Неизвестно' }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="tutor-stats">
+            <div class="stat-item">
+                <div class="stat-number">{{ item.students_count }}</div>
+                <div class="stat-label">Студентов</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">{{ item.courses_count }}</div>
+                <div class="stat-label">Курсов</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">{{ item.lessons_count }}</div>
+                <div class="stat-label">Уроков</div>
+            </div>
+        </div>
+        
+        <div class="tutor-status">
+            {% if item.tutor.is_approved %}
+                <span class="status-badge approved">✅ Одобрен</span>
+            {% else %}
+                <span class="status-badge pending">⏳ Ожидает одобрения</span>
+            {% endif %}
+            
+            {% if item.tutor.is_active %}
+                <span class="status-badge active">🟢 Активен</span>
+            {% else %}
+                <span class="status-badge inactive">🔴 Заблокирован</span>
+            {% endif %}
+        </div>
+        
+        <div class="tutor-actions">
+            <a href="{{ url_for('admin_tutor_detail', tutor_id=item.tutor.id) }}" 
+               class="btn btn-sm btn-primary">
+                👁️ Подробнее
+            </a>
+            
+            <form method="POST" action="{{ url_for('admin_toggle_tutor', tutor_id=item.tutor.id) }}" 
+                  style="display: inline;">
+                <button type="submit" class="btn btn-sm btn-outline">
+                    {% if item.tutor.is_approved %}
+                        🚫 Заблокировать
+                    {% else %}
+                        ✅ Одобрить
+                    {% endif %}
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">👨‍🏫</div>
+    <h3>Нет зарегистрированных репетиторов</h3>
+    <p>Репетиторы появятся здесь после регистрации</p>
+</div>
+{% endif %}
+
+<div class="actions-panel">
+    <a href="{{ url_for('admin_panel') }}" class="btn btn-secondary">
+        🔙 К админ-панели
+    </a>
+</div>
+
+<style>
+.page-header {
+    margin-bottom: 2rem;
+}
+
+.breadcrumb {
+    font-size: 0.9em;
+    color: #666;
+    margin-bottom: 1rem;
+}
+
+.breadcrumb a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+.page-header h1 {
+    margin: 0 0 0.5rem 0;
+    color: var(--primary-color);
+}
+
+.page-header p {
+    color: #666;
+    margin: 0;
+}
+
+.tutors-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.tutor-card {
+    background: white;
+    border: 1px solid #e1e5e9;
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    transition: all 0.2s;
+}
+
+.tutor-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.tutor-card.pending {
+    border-left: 4px solid #ffc107;
+    background: #fffbf0;
+}
+
+.tutor-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+}
+
+.tutor-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.5em;
+}
+
+.tutor-details h3 {
+    margin: 0 0 0.5rem 0;
+}
+
+.tutor-details h3 a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-size: 1.2em;
+}
+
+.tutor-details h3 a:hover {
+    text-decoration: underline;
+}
+
+.tutor-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    font-size: 0.9em;
+    color: #666;
+}
+
+.tutor-stats {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.stat-item {
+    text-align: center;
+    min-width: 60px;
+}
+
+.stat-number {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--primary-color);
+    display: block;
+}
+
+.stat-label {
+    font-size: 0.8em;
+    color: #666;
+    margin-top: 0.25rem;
+}
+
+.tutor-status {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-end;
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.status-badge.approved {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-badge.pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-badge.active {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.status-badge.inactive {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.tutor-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #666;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.actions-panel {
+    padding-top: 2rem;
+    border-top: 2px solid #eee;
+}
+
+@media (max-width: 768px) {
+    .tutor-card {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+    
+    .tutor-info {
+        justify-content: center;
+        text-align: center;
+    }
+    
+    .tutor-meta {
+        justify-content: center;
+    }
+    
+    .tutor-stats {
+        justify-content: center;
+    }
+    
+    .tutor-status {
+        align-items: center;
+    }
+    
+    .tutor-actions {
+        flex-direction: row;
+        justify-content: center;
+    }
+}
+</style>
+{% endblock %}

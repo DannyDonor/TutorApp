@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+
+{% block title %}Проверка задания - TutorApp{% endblock %}
+
+{% block content %}
+<div class="check-header">
+    <div class="breadcrumb">
+        <a href="{{ url_for('tutor_submissions') }}">📋 Проверка заданий</a>
+        →
+        <span>{{ submission.assignment.title }}</span>
+    </div>
+    
+    <h1>✅ Проверка задания</h1>
+</div>
+
+<div class="submission-details">
+    <!-- Информация о задании -->
+    <div class="assignment-info">
+        <h3>📝 Информация о задании</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <strong>Название:</strong>
+                <span>{{ submission.assignment.title }}</span>
+            </div>
+            <div class="info-item">
+                <strong>Студент:</strong>
+                <span>{{ submission.enrollment.student.full_name }}</span>
+            </div>
+            <div class="info-item">
+                <strong>Курс:</strong>
+                <span>{{ submission.assignment.lesson.module.course.title }}</span>
+            </div>
+            <div class="info-item">
+                <strong>Урок:</strong>
+                <span>{{ submission.assignment.lesson.title }}</span>
+            </div>
+            <div class="info-item">
+                <strong>Отправлено:</strong>
+                <span>{{ submission.submitted_at.strftime('%d.%m.%Y %H:%M') }}</span>
+            </div>
+        </div>
+        
+        <div class="assignment-description">
+            <strong>Описание задания:</strong>
+            <div class="description-content">
+                {{ submission.assignment.description | safe }}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Ответ студента -->
+    <div class="student-answer">
+        <h3>💬 Ответ студента</h3>
+        <div class="answer-content">
+            {{ submission.content }}
+        </div>
+    </div>
+    
+    <!-- Форма проверки -->
+    <div class="check-form">
+        <h3>📊 Оценка задания</h3>
+        
+        <form method="POST" class="check-form-content">
+            <div class="form-group">
+                <label for="points">Баллы (необязательно):</label>
+                <input type="number" 
+                       id="points" 
+                       name="points" 
+                       class="form-control"
+                       min="0" 
+                       max="100"
+                       placeholder="Введите количество баллов">
+                <div class="form-hint">Максимум 100 баллов</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="feedback">Комментарий для студента:</label>
+                <textarea id="feedback" 
+                          name="feedback" 
+                          class="form-control"
+                          rows="5"
+                          placeholder="Напишите комментарий или обратную связь для студента..."></textarea>
+                <div class="form-hint">Комментарий поможет студенту понять, что сделано правильно, а что можно улучшить</div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" name="action" value="approve" class="btn btn-success btn-lg">
+                    ✅ Одобрить задание
+                </button>
+                <button type="submit" name="action" value="reject" class="btn btn-danger btn-lg"
+                        onclick="return confirm('Вы уверены, что хотите отклонить это задание? Студент сможет его переделать.')">
+                    ❌ Отклонить задание
+                </button>
+                <a href="{{ url_for('tutor_submissions') }}" class="btn btn-secondary">
+                    🔙 Отменить
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.check-header {
+    margin-bottom: 2rem;
+}
+
+.breadcrumb {
+    font-size: 0.9em;
+    color: #666;
+    margin-bottom: 1rem;
+}
+
+.breadcrumb a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+.check-header h1 {
+    margin: 0;
+    color: var(--primary-color);
+}
+
+.submission-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.assignment-info,
+.student-answer,
+.check-form {
+    background: white;
+    border: 1px solid #e1e5e9;
+    border-radius: var(--radius);
+    padding: 1.5rem;
+}
+
+.assignment-info h3,
+.student-answer h3,
+.check-form h3 {
+    margin: 0 0 1.5rem 0;
+    color: var(--primary-color);
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.info-item strong {
+    color: #333;
+    font-size: 0.9em;
+}
+
+.info-item span {
+    color: #666;
+}
+
+.assignment-description {
+    margin-top: 1.5rem;
+}
+
+.assignment-description strong {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #333;
+}
+
+.description-content {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: var(--radius-sm);
+    border-left: 3px solid #e1e5e9;
+    line-height: 1.6;
+}
+
+.answer-content {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: var(--radius-sm);
+    border-left: 4px solid var(--primary-color);
+    white-space: pre-wrap;
+    line-height: 1.6;
+    color: #333;
+    min-height: 100px;
+}
+
+.check-form-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-group label {
+    font-weight: 600;
+    color: #333;
+}
+
+.form-control {
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: var(--radius-sm);
+    font-size: 1rem;
+    font-family: inherit;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+}
+
+textarea.form-control {
+    resize: vertical;
+    min-height: 120px;
+}
+
+.form-hint {
+    font-size: 0.85em;
+    color: #666;
+    font-style: italic;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-start;
+    margin-top: 1rem;
+}
+
+.btn-lg {
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+}
+
+@media (max-width: 768px) {
+    .info-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+</style>
+
+<script>
+// Автофокус на форме комментария
+document.addEventListener('DOMContentLoaded', function() {
+    const feedbackTextarea = document.getElementById('feedback');
+    if (feedbackTextarea) {
+        feedbackTextarea.focus();
+    }
+});
+</script>
+{% endblock %}

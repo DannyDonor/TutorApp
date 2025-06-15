@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}Настройки - TutorApp{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>⚙️ Настройки аккаунта</h2>
+        <p>Управление данными вашего аккаунта</p>
+    </div>
+    
+    <form method="POST" class="auth-form">
+        <div class="section-header">
+            <h3>👤 Личные данные</h3>
+        </div>
+        
+        <div class="form-group">
+            <label for="email">📧 Email</label>
+            <input type="email" id="email" name="email" required
+                   value="{{ current_user.email }}">
+            <small class="form-text">Email для входа в систему</small>
+        </div>
+        
+        <div class="form-group">
+            <label>💬 Telegram Chat ID</label>
+            <div class="readonly-field">
+                {% if current_user.student and current_user.student.telegram_chat_id %}
+                    <strong>{{ current_user.student.telegram_chat_id }}</strong>
+                    <span class="status-badge status-on">✅ Настроен</span>
+                {% else %}
+                    <span class="text-muted">Не настроен</span>
+                    <span class="status-badge status-off">❌ Отсутствует</span>
+                {% endif %}
+            </div>
+            <small class="form-text">
+                <em>Chat ID настраивается репетитором или администратором для вашей безопасности.</em><br>
+                {% if not (current_user.student and current_user.student.telegram_chat_id) %}
+                <strong>Чтобы получать уведомления в Telegram:</strong><br>
+                1. Перейдите к боту <a href="https://t.me/userinfobot" target="_blank">@userinfobot</a><br>
+                2. Отправьте команду <code>/start</code><br>
+                3. Скопируйте ваш Chat ID<br>
+                4. Передайте его вашему репетитору
+                {% endif %}
+            </small>
+        </div>
+        
+        <div class="form-group">
+            <label class="checkbox-label">
+                <input type="checkbox" name="receive_notifications" 
+                       {% if current_user.student and current_user.student.receive_notifications %}checked{% endif %}>
+                <span class="checkmark"></span>
+                🔔 Получать уведомления в Telegram
+            </label>
+        </div>
+        
+        <hr>
+        <div class="section-header">
+            <h3>🔒 Изменение пароля</h3>
+            <p>Оставьте поля пустыми, если не хотите менять пароль</p>
+        </div>
+        
+        <div class="form-group">
+            <label for="current_password">🔐 Текущий пароль</label>
+            <input type="password" id="current_password" name="current_password"
+                   placeholder="Введите текущий пароль">
+        </div>
+        
+        <div class="form-group">
+            <label for="new_password">🆕 Новый пароль</label>
+            <input type="password" id="new_password" name="new_password"
+                   placeholder="Введите новый пароль (минимум 6 символов)">
+        </div>
+        
+        <div class="form-group">
+            <label for="confirm_password">✅ Подтвердите новый пароль</label>
+            <input type="password" id="confirm_password" name="confirm_password"
+                   placeholder="Повторите новый пароль">
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">💾 Сохранить изменения</button>
+            <a href="{{ url_for('student_dashboard') }}" class="btn btn-secondary">❌ Отмена</a>
+        </div>
+    </form>
+</div>
+
+<style>
+.section-header {
+    margin: 1.5rem 0 1rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--primary-color);
+}
+
+.section-header h3 {
+    margin: 0 0 0.5rem 0;
+    color: var(--primary-color);
+}
+
+.section-header p {
+    margin: 0;
+    color: #666;
+    font-size: 0.9em;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: var(--radius-sm);
+    transition: background-color 0.2s;
+}
+
+.checkbox-label:hover {
+    background-color: #f8f9fa;
+}
+
+.checkmark {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    position: relative;
+    transition: all 0.2s;
+}
+
+.checkbox-label input[type="checkbox"] {
+    display: none;
+}
+
+.checkbox-label input[type="checkbox"]:checked + .checkmark {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.checkbox-label input[type="checkbox"]:checked + .checkmark::after {
+    content: '✓';
+    position: absolute;
+    top: -2px;
+    left: 3px;
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.readonly-field {
+    padding: 0.75rem 1rem;
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    justify-content: space-between;
+}
+
+.readonly-field strong {
+    color: var(--primary-color);
+}
+
+.text-muted {
+    color: #6c757d;
+    font-style: italic;
+}
+
+.status-badge {
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.status-on {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-off {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+code {
+    background-color: #f1f3f4;
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+}
+
+.form-text strong {
+    color: var(--primary-color);
+}
+</style>
+{% endblock %}

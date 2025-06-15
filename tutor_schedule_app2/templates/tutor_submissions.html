@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block title %}Проверка заданий - TutorApp{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>📋 Проверка заданий курсов</h1>
+    <p>Ответы студентов на задания ваших курсов</p>
+</div>
+
+{% if submissions %}
+<div class="submissions-list">
+    {% for submission in submissions %}
+    <div class="submission-card">
+        <div class="submission-info">
+            <div class="submission-header">
+                <h3>{{ submission.assignment.title }}</h3>
+                <div class="submission-meta">
+                    <span class="meta-item">
+                        <strong>👤 Студент:</strong> {{ submission.enrollment.student.full_name }}
+                    </span>
+                    <span class="meta-item">
+                        <strong>📚 Курс:</strong> {{ submission.assignment.lesson.module.course.title }}
+                    </span>
+                    <span class="meta-item">
+                        <strong>📖 Урок:</strong> {{ submission.assignment.lesson.title }}
+                    </span>
+                    <span class="meta-item">
+                        <strong>📅 Отправлено:</strong> {{ submission.submitted_at.strftime('%d.%m.%Y %H:%M') }}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="assignment-description">
+                <strong>Задание:</strong>
+                <div class="description-content">
+                    {{ submission.assignment.description[:200] }}{% if submission.assignment.description|length > 200 %}...{% endif %}
+                </div>
+            </div>
+            
+            <div class="submission-content">
+                <strong>Ответ студента:</strong>
+                <div class="content-preview">
+                    {{ submission.content[:300] }}{% if submission.content|length > 300 %}...{% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="submission-actions">
+            <a href="{{ url_for('check_submission', submission_id=submission.id) }}" 
+               class="btn btn-primary">
+                ✅ Проверить
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="summary-info">
+    <p><strong>Всего на проверке:</strong> {{ submissions|length }} заданий</p>
+</div>
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">📋</div>
+    <h3>Нет заданий на проверке</h3>
+    <p>Здесь будут появляться ответы студентов на задания ваших курсов</p>
+</div>
+{% endif %}
+
+<style>
+.page-header {
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.page-header h1 {
+    margin: 0 0 0.5rem 0;
+    color: var(--primary-color);
+}
+
+.page-header p {
+    color: #666;
+    margin: 0;
+}
+
+.submissions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.submission-card {
+    background: white;
+    border: 1px solid #e1e5e9;
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    display: flex;
+    gap: 1.5rem;
+    transition: all 0.2s;
+}
+
+.submission-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.submission-info {
+    flex: 1;
+}
+
+.submission-header h3 {
+    margin: 0 0 1rem 0;
+    color: var(--primary-color);
+}
+
+.submission-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.9em;
+}
+
+.meta-item {
+    color: #666;
+}
+
+.meta-item strong {
+    color: #333;
+}
+
+.assignment-description,
+.submission-content {
+    margin-bottom: 1rem;
+}
+
+.assignment-description strong,
+.submission-content strong {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #333;
+}
+
+.description-content,
+.content-preview {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: var(--radius-sm);
+    border-left: 3px solid #e1e5e9;
+    color: #666;
+    line-height: 1.5;
+}
+
+.content-preview {
+    border-left-color: var(--primary-color);
+    white-space: pre-wrap;
+}
+
+.submission-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.summary-info {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: var(--radius);
+    text-align: center;
+    color: #666;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #666;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+    .submission-card {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .submission-meta {
+        grid-template-columns: 1fr;
+        gap: 0.25rem;
+    }
+    
+    .submission-actions {
+        flex-direction: row;
+        justify-content: center;
+    }
+}
+</style>
+{% endblock %}

@@ -28,6 +28,7 @@
             <thead>
                 <tr>
                     <th>ФИО</th>
+                    {% if current_user.role == 'admin' %}<th>Репетитор</th>{% endif %}
                     <th>Chat ID</th>
                     <th>Всего занятий</th>
                     <th>Уведомления</th>
@@ -40,6 +41,15 @@
                     <td>
                         <strong>{{ student.full_name }}</strong>
                     </td>
+                    {% if current_user.role == 'admin' %}
+                    <td>
+                        {% if student.tutor %}
+                            <span class="tutor-badge">{{ student.tutor.username }}</span>
+                        {% else %}
+                            <span class="text-muted">Не назначен</span>
+                        {% endif %}
+                    </td>
+                    {% endif %}
                     <td>
                         {% if student.telegram_chat_id %}
                             <code>{{ student.telegram_chat_id }}</code>
@@ -87,4 +97,16 @@
         </div>
     {% endif %}
 </div>
+
+<style>
+.tutor-badge {
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-weight: 500;
+    border: 1px solid #bbdefb;
+}
+</style>
 {% endblock %}

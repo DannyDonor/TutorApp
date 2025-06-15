@@ -99,17 +99,18 @@
                         <h3>👤 Аккаунт</h3>
                         {% if student.user_account %}
                             <div class="account-info">
-                                <span class="status-badge status-on">✅ Создан</span>
-                                <small>{{ student.user_account.username }}</small>
-                            </div>
-                        {% else %}
+                                <div class="account-details">
+                                    <span class="status-badge status-on">✅ Активен</span>
+                                    <div class="account-data">
+                                        <strong>Email:</strong> {{ student.user_account.email }}<br>
+                                        <strong>Логин:</strong> {{ student.user_account.username }}
+                                    </div>
+                                </div>
+                </div>
+                                    {% else %}
                             <div class="account-info">
                                 <span class="status-badge status-pending">⏳ Не создан</span>
-                                <a href="{{ url_for('invite_student', student_id=student.id) }}" 
-                                   class="btn btn-sm btn-primary"
-                                   onclick="return confirm('Создать приглашение?')">
-                                    📧 Пригласить
-                                </a>
+                                <p><small>Аккаунт будет создан при добавлении студента</small></p>
                             </div>
                         {% endif %}
                     </div>

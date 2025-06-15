@@ -15,6 +15,10 @@
                 <label for="description" class="form-label">Описание (необязательно):</label>
                 <input type="text" class="form-control" id="description" name="description">
             </div>
+            <div class="mb-3">
+                <label for="payment_date" class="form-label">Дата платежа:</label>
+                <input type="date" class="form-control" id="payment_date" name="payment_date" value="{{ today }}">
+            </div>
             <button type="submit" class="btn btn-primary">Добавить платеж</button>
             <a href="{{ url_for('view_student_card', student_id=student.id) }}" class="btn btn-secondary">Отмена</a>
         </form>

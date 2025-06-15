@@ -31,38 +31,43 @@
             </small>
         </div>
         
+        {% if current_user.role == 'admin' and tutors %}
         <div class="form-group">
-            <label class="checkbox-label">
-                <input type="checkbox" id="create_account" name="create_account" onchange="toggleAccountFields()">
-                <span class="checkmark"></span>
-                🔐 Создать аккаунт для студента
-            </label>
+            <label for="tutor_id">👨‍🏫 Репетитор</label>
+            <select id="tutor_id" name="tutor_id">
+                <option value="">Без репетитора</option>
+                {% for tutor in tutors %}
+                <option value="{{ tutor.id }}">{{ tutor.username }} ({{ tutor.email }})</option>
+                {% endfor %}
+            </select>
+            <small class="form-text">Выберите репетитора для этого студента</small>
         </div>
-      
-          <div id="account-fields" style="display: none;">
-            <hr>
-            <div class="section-header">
-                <h3>🔐 Данные аккаунта</h3>
-            </div>
-            
-            <div class="form-group">
-                <label for="username">👤 Логин</label>
-                <input type="text" id="username" name="username" 
-                       placeholder="Логин для входа в систему">
-            </div>
-            
-            <div class="form-group">
-                <label for="email">📧 Email</label>
-                <input type="email" id="email" name="email" 
-                       placeholder="email@example.com">
-            </div>
-            
-            <div class="form-group">
-                <label for="password">🔒 Пароль</label>
-                <input type="text" id="password" name="password" value="student123"
-                       placeholder="Пароль для входа">
-                <small class="form-text">По умолчанию: student123</small>
-            </div>
+        {% elif current_user.role == 'tutor' %}
+        <div class="form-group">
+            <label>👨‍🏫 Репетитор</label>
+            <input type="text" value="{{ current_user.username }}" disabled>
+            <small class="form-text">Студент будет автоматически привязан к вам</small>
+        </div>
+        {% endif %}
+        
+        <hr>
+        <div class="section-header">
+            <h3>🔐 Данные для входа студента</h3>
+            <p>Эти данные будут переданы студенту для авторизации в системе</p>
+        </div>
+        
+        <div class="form-group">
+            <label for="email">📧 Email *</label>
+            <input type="email" id="email" name="email" required
+                   placeholder="email@example.com">
+            <small class="form-text">Email для входа в систему</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="password">🔒 Пароль *</label>
+            <input type="text" id="password" name="password" required
+                   placeholder="Придумайте пароль для студента" value="student123">
+            <small class="form-text">Минимум 6 символов. Студент сможет изменить пароль в настройках</small>
         </div>
         
         <div class="form-actions">
@@ -71,23 +76,4 @@
         </div>
     </form>
 </div>
-
-<script>
-function toggleAccountFields() {
-    const checkbox = document.getElementById('create_account');
-    const fields = document.getElementById('account-fields');
-    const usernameField = document.getElementById('username');
-    const emailField = document.getElementById('email');
-    
-    if (checkbox.checked) {
-        fields.style.display = 'block';
-        usernameField.required = true;
-        emailField.required = true;
-    } else {
-        fields.style.display = 'none';
-        usernameField.required = false;
-        emailField.required = false;
-    }
-}
-</script>
 {% endblock %}

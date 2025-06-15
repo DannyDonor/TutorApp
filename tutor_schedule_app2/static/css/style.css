@@ -365,6 +365,16 @@ body {
     background: rgba(245, 158, 11, 0.3);
 }
 
+.nav-link.primary {
+    background: rgba(99, 102, 241, 0.2);
+    border-color: rgba(99, 102, 241, 0.3);
+    font-weight: 600;
+}
+
+.nav-link.primary:hover {
+    background: rgba(99, 102, 241, 0.3);
+}
+
 /* Мобильное меню */
 .mobile-menu-toggle {
     display: none;

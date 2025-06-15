@@ -1,0 +1,343 @@
+{% extends "base.html" %}
+
+{% block title %}{{ course.title }} - TutorApp{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="course-header">
+        <div class="course-info">
+            <h1>📚 {{ course.title }}</h1>
+            {% if course.description %}
+                <p class="course-description">{{ course.description }}</p>
+            {% endif %}
+            <div class="course-meta">
+                <span class="meta-item">
+                    <strong>👨‍🏫 Репетитор:</strong> {{ course.tutor.username }}
+                </span>
+                <span class="meta-item">
+                    <strong>📅 Создан:</strong> {{ course.created_at.strftime('%d.%m.%Y') }}
+                </span>
+                <span class="meta-item">
+                    <strong>👥 Студентов:</strong> {{ enrollments_count }}
+                </span>
+            </div>
+        </div>
+        
+        <div class="course-actions">
+            {% if session.role == 'tutor' and course.tutor_id == session.user_id %}
+            <a href="{{ url_for('create_module', course_id=course.id) }}" 
+               class="btn btn-primary">
+                ➕ Добавить модуль
+            </a>
+            <button class="btn btn-secondary" onclick="toggleCourseStatus()">
+                {% if course.is_active %}⏸️ Деактивировать{% else %}▶️ Активировать{% endif %}
+            </button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if modules %}
+<div class="modules-container">
+    {% for module in modules %}
+    <div class="module-card">
+        <div class="module-header">
+            <h3>
+                <span class="module-number">{{ loop.index }}</span>
+                {{ module.title }}
+            </h3>
+            <div class="module-actions">
+                {% if session.role == 'tutor' and course.tutor_id == session.user_id %}
+                <a href="{{ url_for('create_lesson', module_id=module.id) }}" 
+                   class="btn btn-sm btn-primary">
+                    ➕ Урок
+                </a>
+                <button class="btn btn-sm btn-secondary" 
+                        onclick="editModule({{ module.id }})">
+                    ✏️ Редактировать
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if module.description %}
+        <p class="module-description">{{ module.description }}</p>
+        {% endif %}
+        
+        {% if module.lessons %}
+        <div class="lessons-list">
+            <h4>📖 Уроки модуля:</h4>
+            {% for lesson in module.lessons %}
+            <div class="lesson-item">
+                <div class="lesson-info">
+                    <span class="lesson-number">{{ loop.index }}</span>
+                    <div class="lesson-details">
+                        <h5>{{ lesson.title }}</h5>
+                        <div class="lesson-meta">
+                            <span>📎 {{ lesson.materials|length }} материалов</span>
+                            <span>📝 {{ lesson.assignments|length }} заданий</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="lesson-actions">
+                    <a href="{{ url_for('lesson_detail', lesson_id=lesson.id) }}" 
+                       class="btn btn-sm btn-outline">
+                        👁️ Открыть
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-lessons">
+            <p>📭 В модуле пока нет уроков</p>
+            {% if session.role == 'tutor' and course.tutor_id == session.user_id %}
+            <a href="{{ url_for('create_lesson', module_id=module.id) }}" 
+               class="btn btn-sm btn-primary">
+                ➕ Создать первый урок
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">📚</div>
+    <h3>Курс пока не содержит модулей</h3>
+    <p>Добавьте модули, чтобы структурировать ваш курс</p>
+    {% if session.role == 'tutor' and course.tutor_id == session.user_id %}
+    <a href="{{ url_for('create_module', course_id=course.id) }}" 
+       class="btn btn-primary">
+        ➕ Создать первый модуль
+    </a>
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="course-actions-panel">
+    <a href="{{ url_for('courses_list') }}" class="btn btn-secondary">
+        🔙 К списку курсов
+    </a>
+    {% if session.role == 'tutor' and course.tutor_id == session.user_id %}
+    <a href="{{ url_for('course_students', course_id=course.id) }}" class="btn btn-outline">
+        👥 Управление студентами
+    </a>
+    {% endif %}
+</div>
+
+<style>
+.course-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.course-info h1 {
+    margin: 0 0 1rem 0;
+    color: var(--primary-color);
+}
+
+.course-description {
+    font-size: 1.1em;
+    line-height: 1.6;
+    color: #555;
+    margin-bottom: 1rem;
+}
+
+.course-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    color: #666;
+    font-size: 0.9em;
+}
+
+.course-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.modules-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.module-card {
+    background: white;
+    border: 1px solid #e1e5e9;
+    border-radius: var(--radius);
+    padding: 1.5rem;
+}
+
+.module-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.module-header h3 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--primary-color);
+}
+
+.module-number {
+    background: var(--primary-color);
+    color: white;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9em;
+    font-weight: bold;
+}
+
+.module-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.module-description {
+    color: #666;
+    margin-bottom: 1rem;
+    line-height: 1.5;
+}
+
+.lessons-list h4 {
+    margin: 1.5rem 0 1rem 0;
+    color: #333;
+    font-size: 1.1em;
+}
+
+.lesson-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border: 1px solid #eee;
+    border-radius: var(--radius-sm);
+    margin-bottom: 0.5rem;
+    transition: all 0.2s;
+}
+
+.lesson-item:hover {
+    background: #f8f9fa;
+    border-color: var(--primary-color);
+}
+
+.lesson-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-grow: 1;
+}
+
+.lesson-number {
+    background: #f1f3f4;
+    color: #333;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8em;
+    font-weight: bold;
+}
+
+.lesson-details h5 {
+    margin: 0 0 0.25rem 0;
+    color: #333;
+}
+
+.lesson-meta {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.85em;
+    color: #666;
+}
+
+.empty-lessons {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+    background: #f8f9fa;
+    border-radius: var(--radius-sm);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #666;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.course-actions-panel {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 2px solid #eee;
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.btn.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+@media (max-width: 768px) {
+    .course-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .course-actions {
+        flex-direction: row;
+    }
+    
+    .module-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+    
+    .lesson-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+}
+</style>
+
+<script>
+function toggleCourseStatus() {
+    if (confirm('Изменить статус курса?')) {
+        // Здесь будет AJAX запрос для изменения статуса
+        alert('Функция в разработке');
+    }
+}
+
+function editModule(moduleId) {
+    // Здесь будет функция редактирования модуля
+    alert('Функция редактирования в разработке');
+}
+</script>
+{% endblock %}

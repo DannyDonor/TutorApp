@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Создать модуль - {{ course.title }} - TutorApp{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>➕ Создать модуль</h2>
+        <p>Добавление нового модуля в курс "{{ course.title }}"</p>
+    </div>
+    
+    <form method="POST" class="auth-form">
+        <div class="form-group">
+            <label for="title">📚 Название модуля *</label>
+            <input type="text" id="title" name="title" required
+                   placeholder="Например: Введение в основы"
+                   maxlength="200">
+            <small class="form-text">Краткое название модуля курса</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="description">📝 Описание модуля</label>
+            <textarea id="description" name="description" rows="4"
+                      placeholder="Что будет изучаться в этом модуле..."></textarea>
+            <small class="form-text">Краткое описание содержания модуля</small>
+        </div>
+        
+        <div class="info-box">
+            <h4>💡 После создания модуля вы сможете:</h4>
+            <ul>
+                <li>✅ Добавить уроки в модуль</li>
+                <li>📎 Загрузить материалы к урокам</li>
+                <li>📝 Создать задания для студентов</li>
+                <li>🔄 Изменять порядок уроков</li>
+            </ul>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+                ✅ Создать модуль
+            </button>
+            <a href="{{ url_for('course_detail', course_id=course.id) }}" class="btn btn-secondary">
+                ❌ Отмена
+            </a>
+        </div>
+    </form>
+</div>
+
+<style>
+.info-box {
+    background: linear-gradient(135deg, #f8f9ff, #e8f2ff);
+    border: 1px solid #c3d9ff;
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin: 2rem 0;
+}
+
+.info-box h4 {
+    margin: 0 0 1rem 0;
+    color: var(--primary-color);
+}
+
+.info-box ul {
+    margin: 0;
+    padding-left: 1.5rem;
+}
+
+.info-box li {
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+}
+
+.card-header p {
+    margin: 0.5rem 0 0 0;
+    color: #666;
+}
+</style>
+{% endblock %}

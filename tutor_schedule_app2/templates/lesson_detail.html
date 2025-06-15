@@ -1,0 +1,947 @@
+{% extends "base.html" %}
+
+{% block title %}{{ lesson.title }} - {{ module.title }} - TutorApp{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="lesson-header">
+        <div class="breadcrumb">
+            <a href="{{ url_for('course_detail', course_id=course.id) }}">📚 {{ course.title }}</a>
+            →
+            <span>{{ module.title }}</span>
+            →
+            <span>{{ lesson.title }}</span>
+        </div>
+        
+        <div class="lesson-info">
+            <h1>📖 {{ lesson.title }}</h1>
+            <div class="lesson-meta">
+                <span class="meta-item">
+                    <strong>📅 Создан:</strong> {{ lesson.created_at.strftime('%d.%m.%Y') }}
+                </span>
+                <span class="meta-item">
+                    <strong>📎 Материалов:</strong> {{ materials|length }}
+                </span>
+                <span class="meta-item">
+                    <strong>📝 Заданий:</strong> {{ assignments|length }}
+                </span>
+            </div>
+        </div>
+        
+        <div class="lesson-actions">
+            {% if session.role == 'tutor' and course.tutor_id == session.user_id %}
+            <a href="{{ url_for('add_text_block', lesson_id=lesson.id) }}" class="btn btn-primary">
+                📝 Добавить текст
+            </a>
+            <a href="{{ url_for('add_material', lesson_id=lesson.id) }}" class="btn btn-secondary">
+                📎 Добавить материал
+            </a>
+            <a href="{{ url_for('add_assignment', lesson_id=lesson.id) }}" class="btn btn-outline">
+                📋 Добавить задание
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Блоки урока -->
+{% if blocks or lesson.content %}
+<div class="lesson-blocks-section">
+    <h3>📄 Содержание урока</h3>
+    
+    <!-- Показываем старое содержание урока, если оно есть и нет блоков -->
+    {% if lesson.content and not blocks %}
+    <div class="lesson-block legacy-content">
+        <div class="block-content">
+            {{ lesson.content | safe }}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Показываем блоки урока -->
+    {% for block in blocks %}
+    <div class="lesson-block" data-block-id="{{ block.id }}">
+        {% if block.title %}
+        <div class="block-header">
+            <h4>{{ block.title }}</h4>
+            {% if session.role == 'tutor' and course.tutor_id == session.user_id %}
+            <div class="block-actions">
+                <a href="{{ url_for('edit_text_block', lesson_id=lesson.id, block_id=block.id) }}" 
+                   class="btn btn-sm btn-outline">
+                    ✏️ Редактировать
+                </a>
+                <button class="btn btn-sm btn-outline" onclick="moveBlockUp({{ block.id }})">
+                    ⬆️
+                </button>
+                <button class="btn btn-sm btn-outline" onclick="moveBlockDown({{ block.id }})">
+                    ⬇️
+                </button>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        <div class="block-content">
+            {% if block.block_type == 'text' %}
+                {{ block.content | safe }}
+            {% elif block.block_type == 'material' and block.material %}
+                <div class="block-material">
+                    <h5>📎 {{ block.material.title }}</h5>
+                    <!-- Здесь будет отображение материала -->
+                </div>
+            {% endif %}
+        </div>
+        
+        {% if not block.title and session.role == 'tutor' and course.tutor_id == session.user_id %}
+        <div class="block-actions-bottom">
+            <a href="{{ url_for('edit_text_block', lesson_id=lesson.id, block_id=block.id) }}" 
+               class="btn btn-sm btn-outline">
+                ✏️ Редактировать
+            </a>
+            <button class="btn btn-sm btn-outline" onclick="moveBlockUp({{ block.id }})">
+                ⬆️
+            </button>
+            <button class="btn btn-sm btn-outline" onclick="moveBlockDown({{ block.id }})">
+                ⬇️
+            </button>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if materials %}
+<div class="materials-section">
+    <h3>📎 Материалы урока</h3>
+    
+    <!-- Встроенные материалы -->
+    {% for material in materials %}
+    {% if material.material_type in ['presentation', 'video', 'document', 'spreadsheet'] %}
+    <div class="embedded-material">
+        <div class="embedded-header">
+            <h4>
+                {% if material.material_type == 'presentation' %}📊
+                {% elif material.material_type == 'video' %}🎥
+                {% elif material.material_type == 'document' %}📄
+                {% elif material.material_type == 'spreadsheet' %}📋
+                {% endif %}
+                {{ material.title }}
+            </h4>
+            <div class="embedded-actions">
+                <a href="{{ material.file_path }}" target="_blank" class="btn btn-sm btn-outline">
+                    🔗 Открыть в новой вкладке
+                </a>
+                {% if session.role == 'tutor' and course.tutor_id == session.user_id %}
+                <button class="btn btn-sm btn-outline" onclick="deleteMaterial({{ material.id }})" title="Функция в разработке">
+                    🗑️ Удалить
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="embedded-content">
+            {% if material.material_type == 'presentation' %}
+                <iframe src="{{ material.file_path | replace('/edit', '/embed') }}" 
+                        frameborder="0" 
+                        allowfullscreen="true" 
+                        mozallowfullscreen="true" 
+                        webkitallowfullscreen="true">
+                </iframe>
+            {% elif material.material_type == 'video' %}
+                <div class="video-embed" data-url="{{ material.file_path }}">
+                    <iframe frameborder="0" allowfullscreen></iframe>
+                </div>
+            {% elif material.material_type == 'document' %}
+                <iframe src="{{ material.file_path | replace('/edit', '/preview') }}" 
+                        frameborder="0">
+                </iframe>
+            {% elif material.material_type == 'spreadsheet' %}
+                <iframe src="{{ material.file_path | replace('/edit', '/preview') }}" 
+                        frameborder="0">
+                </iframe>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+    
+    <!-- Список остальных материалов -->
+    {% set embed_types = ['presentation', 'video', 'document', 'spreadsheet'] %}
+    {% set has_other_materials = false %}
+    {% for material in materials %}
+        {% if material.material_type not in embed_types %}
+            {% set has_other_materials = true %}
+        {% endif %}
+    {% endfor %}
+    
+    {% if has_other_materials %}
+    <div class="materials-list">
+        <h4>📋 Дополнительные материалы</h4>
+        <div class="materials-grid">
+            {% for material in materials %}
+            {% if material.material_type not in embed_types %}
+            <div class="material-item">
+                <div class="material-icon">
+                    {% if material.material_type == 'image' %}📸
+                    {% elif material.material_type == 'drive_file' %}💾
+                    {% elif material.material_type == 'link' %}🔗
+                    {% else %}📎{% endif %}
+                </div>
+                <div class="material-info">
+                    <h5>{{ material.title }}</h5>
+                    <div class="material-meta">
+                        <span>{{ material.original_filename }}</span>
+                    </div>
+                </div>
+                <div class="material-actions">
+                    <a href="{{ material.file_path }}" target="_blank" class="btn btn-sm btn-primary">
+                        👁️ Открыть
+                    </a>
+                    {% if session.role == 'tutor' and course.tutor_id == session.user_id %}
+                    <button class="btn btn-sm btn-outline" onclick="deleteMaterial({{ material.id }})" title="Функция в разработке">
+                        🗑️ Удалить
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if assignments %}
+<div class="assignments-section">
+    <h3>📝 Задания урока</h3>
+    <div class="assignments-list">
+        {% for assignment in assignments %}
+        <div class="assignment-item">
+            <div class="assignment-header">
+                <h4>{{ assignment.title }}</h4>
+                <div class="assignment-meta">
+                    <span class="assignment-type">
+                        {% if assignment.assignment_type == 'text' %}📝 Текстовое
+                        {% elif assignment.assignment_type == 'file' %}📎 Файл
+                        {% elif assignment.assignment_type == 'quiz' %}❓ Тест
+                        {% else %}📋 Другое{% endif %}
+                    </span>
+                    {% if assignment.is_required %}
+                    <span class="badge badge-required">Обязательно</span>
+                    {% endif %}
+                    <span class="assignment-points">{{ assignment.max_points }} баллов</span>
+                </div>
+            </div>
+            
+            <div class="assignment-description">
+                <p>{{ assignment.description }}</p>
+            </div>
+            
+            <div class="assignment-actions">
+                {% if session.role == 'tutor' and course.tutor_id == session.user_id %}
+                <a href="{{ url_for('edit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-primary">
+                    ✏️ Редактировать
+                </a>
+                <button class="btn btn-sm btn-outline" onclick="alert('Просмотр ответов студентов будет доступен позже!')">
+                    📊 Ответы ({{ assignment.submissions|length }})
+                </button>
+                {% else %}
+                <button class="btn btn-sm btn-primary" onclick="alert('Ответ на задание будет доступен для студентов позже!')">
+                    📝 Ответить
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if not materials and not assignments and not blocks and not lesson.content %}
+<div class="empty-state">
+    <div class="empty-icon">📭</div>
+    <h3>Урок пока пустой</h3>
+    <p>Добавьте текстовые блоки, материалы и задания, чтобы создать полноценный урок</p>
+    {% if session.role == 'tutor' and course.tutor_id == session.user_id %}
+    <div class="empty-actions">
+        <a href="{{ url_for('add_text_block', lesson_id=lesson.id) }}" class="btn btn-primary">
+            📝 Добавить текст
+        </a>
+        <a href="{{ url_for('add_material', lesson_id=lesson.id) }}" class="btn btn-secondary">
+            📎 Добавить материал
+        </a>
+        <a href="{{ url_for('add_assignment', lesson_id=lesson.id) }}" class="btn btn-outline">
+            📋 Добавить задание
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="lesson-actions-panel">
+    <a href="{{ url_for('course_detail', course_id=course.id) }}" class="btn btn-secondary">
+        🔙 К курсу
+    </a>
+    {% if session.role == 'tutor' and course.tutor_id == session.user_id %}
+    <a href="{{ url_for('create_lesson', module_id=module.id) }}" class="btn btn-outline">
+        ➕ Создать еще урок
+    </a>
+    {% endif %}
+</div>
+
+<style>
+.lesson-header {
+    margin-bottom: 2rem;
+}
+
+.breadcrumb {
+    font-size: 0.9em;
+    color: #666;
+    margin-bottom: 1rem;
+}
+
+.breadcrumb a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+.lesson-info h1 {
+    margin: 0 0 1rem 0;
+    color: var(--primary-color);
+}
+
+.lesson-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    color: #666;
+    font-size: 0.9em;
+    margin-bottom: 1.5rem;
+}
+
+.lesson-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.lesson-content-card {
+    background: white;
+    border: 1px solid #e1e5e9;
+    border-radius: var(--radius);
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.lesson-content-card h3 {
+    margin: 0 0 1.5rem 0;
+    color: var(--primary-color);
+}
+
+.lesson-content {
+    line-height: 1.8;
+    font-size: 1.05em;
+}
+
+.lesson-content h1, .lesson-content h2, .lesson-content h3 {
+    color: var(--primary-color);
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+}
+
+.lesson-content h1:first-child, 
+.lesson-content h2:first-child, 
+.lesson-content h3:first-child {
+    margin-top: 0;
+}
+
+.lesson-content code {
+    background: #f1f3f4;
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    color: #e83e8c;
+}
+
+.lesson-content pre {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: var(--radius-sm);
+    overflow-x: auto;
+    margin: 1.5rem 0;
+    border: 1px solid #dee2e6;
+}
+
+.lesson-content pre code {
+    background: none;
+    padding: 0;
+    color: #333;
+}
+
+.lesson-content ul, .lesson-content ol {
+    margin: 1.5rem 0;
+    padding-left: 2rem;
+}
+
+.lesson-content li {
+    margin-bottom: 0.75rem;
+}
+
+.lesson-content blockquote {
+    border-left: 4px solid var(--primary-color);
+    padding-left: 1rem;
+    margin: 1.5rem 0;
+    font-style: italic;
+    color: #666;
+}
+
+.materials-section, .assignments-section {
+    background: white;
+    border: 1px solid #e1e5e9;
+    border-radius: var(--radius);
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.embedded-material {
+    margin-bottom: 3rem;
+    border: 1px solid #e1e5e9;
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.embedded-header {
+    background: #f8f9fa;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e1e5e9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.embedded-header h4 {
+    margin: 0;
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.embedded-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.embedded-content {
+    position: relative;
+    padding-bottom: 56.25%; /* 16:9 aspect ratio */
+    height: 0;
+    overflow: hidden;
+}
+
+.embedded-content iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+.materials-list {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 2px solid #f1f3f4;
+}
+
+.materials-list h4 {
+    margin: 0 0 1rem 0;
+    color: #666;
+}
+
+.materials-section h3, .assignments-section h3 {
+    margin: 0 0 1.5rem 0;
+    color: var(--primary-color);
+}
+
+.materials-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.material-item {
+    border: 1px solid #eee;
+    border-radius: var(--radius-sm);
+    padding: 1rem;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    transition: all 0.2s;
+}
+
+.material-item:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.material-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+}
+
+.material-info {
+    flex-grow: 1;
+}
+
+.material-info h4 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+}
+
+.material-meta {
+    font-size: 0.85em;
+    color: #666;
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.material-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex-shrink: 0;
+}
+
+.assignments-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.assignment-item {
+    border: 1px solid #eee;
+    border-radius: var(--radius-sm);
+    padding: 1.5rem;
+    transition: all 0.2s;
+}
+
+.assignment-item:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.assignment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    gap: 1rem;
+}
+
+.assignment-header h4 {
+    margin: 0;
+    color: var(--primary-color);
+}
+
+.assignment-meta {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+    font-size: 0.9em;
+}
+
+.assignment-type {
+    color: #666;
+}
+
+.badge-required {
+    background: #dc3545;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: bold;
+}
+
+.assignment-points {
+    background: var(--primary-color);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: bold;
+}
+
+.assignment-description {
+    margin-bottom: 1rem;
+    color: #555;
+    line-height: 1.6;
+}
+
+.assignment-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #666;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.empty-actions {
+    margin-top: 2rem;
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.lesson-actions-panel {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 2px solid #eee;
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+    .lesson-header {
+        text-align: center;
+    }
+    
+    .lesson-actions {
+        justify-content: center;
+    }
+    
+    .materials-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .material-item {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .assignment-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .assignment-meta {
+        justify-content: center;
+    }
+}
+
+/* Стили для блоков урока */
+.lesson-blocks-section {
+    background: white;
+    border: 1px solid #e1e5e9;
+    border-radius: var(--radius);
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.lesson-blocks-section h3 {
+    margin: 0 0 1.5rem 0;
+    color: var(--primary-color);
+}
+
+.lesson-block {
+    border: 1px solid #e1e5e9;
+    border-radius: var(--radius-sm);
+    margin-bottom: 1.5rem;
+    background: #f8f9fa;
+    transition: all 0.2s;
+}
+
+.lesson-block:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.lesson-block.legacy-content {
+    background: #fff9e6;
+    border-color: #ffc107;
+}
+
+.block-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: white;
+    border-bottom: 1px solid #e1e5e9;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+.block-header h4 {
+    margin: 0;
+    color: var(--primary-color);
+    font-size: 1.1em;
+}
+
+.block-actions, .block-actions-bottom {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.block-actions-bottom {
+    padding: 1rem 1.5rem;
+    background: white;
+    border-top: 1px solid #e1e5e9;
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+}
+
+.block-content {
+    padding: 1.5rem;
+    background: white;
+    line-height: 1.8;
+    font-size: 1.05em;
+}
+
+.lesson-block:not(.legacy-content) .block-content {
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+}
+
+.lesson-block.legacy-content .block-content {
+    border-radius: var(--radius-sm);
+}
+
+.block-content h1, .block-content h2, .block-content h3 {
+    color: var(--primary-color);
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+}
+
+.block-content h1:first-child, 
+.block-content h2:first-child, 
+.block-content h3:first-child {
+    margin-top: 0;
+}
+
+.block-content code {
+    background: #f1f3f4;
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    color: #e83e8c;
+}
+
+.block-content pre {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: var(--radius-sm);
+    overflow-x: auto;
+    margin: 1.5rem 0;
+    border: 1px solid #dee2e6;
+}
+
+.block-content pre code {
+    background: none;
+    padding: 0;
+    color: #333;
+}
+
+.block-content ul, .block-content ol {
+    margin: 1.5rem 0;
+    padding-left: 2rem;
+}
+
+.block-content li {
+    margin-bottom: 0.75rem;
+}
+
+.block-content blockquote {
+    border-left: 4px solid var(--primary-color);
+    padding-left: 1rem;
+    margin: 1.5rem 0;
+    font-style: italic;
+    color: #666;
+}
+
+.block-material h5 {
+    margin: 0 0 1rem 0;
+    color: var(--primary-color);
+}
+
+@media (max-width: 768px) {
+    .block-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+    
+    .block-actions, .block-actions-bottom {
+        justify-content: center;
+    }
+}
+</style>
+
+<script>
+// Форматирование содержания урока и обработка видео при загрузке
+document.addEventListener('DOMContentLoaded', function() {
+    const contentDiv = document.getElementById('lesson-content');
+    if (contentDiv && contentDiv.textContent.trim()) {
+        // Применяем базовое форматирование к тексту
+        let content = contentDiv.textContent;
+        contentDiv.innerHTML = formatLessonContent(content);
+    }
+    
+    // Обрабатываем видео ссылки
+    processVideoEmbeds();
+});
+
+function processVideoEmbeds() {
+    const videoEmbeds = document.querySelectorAll('.video-embed');
+    
+    videoEmbeds.forEach(embed => {
+        const url = embed.dataset.url;
+        const iframe = embed.querySelector('iframe');
+        
+        if (url.includes('youtube.com') || url.includes('youtu.be')) {
+            const videoId = extractYouTubeId(url);
+            if (videoId) {
+                iframe.src = `https://www.youtube.com/embed/${videoId}`;
+            }
+        } else if (url.includes('vimeo.com')) {
+            const videoId = extractVimeoId(url);
+            if (videoId) {
+                iframe.src = `https://player.vimeo.com/video/${videoId}`;
+            }
+        } else {
+            // Для других видео просто используем исходную ссылку
+            iframe.src = url;
+        }
+    });
+}
+
+function extractYouTubeId(url) {
+    const regex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/;
+    const match = url.match(regex);
+    return match ? match[1] : null;
+}
+
+function extractVimeoId(url) {
+    const regex = /vimeo\.com\/(\d+)/;
+    const match = url.match(regex);
+    return match ? match[1] : null;
+}
+
+function deleteMaterial(materialId) {
+    if (confirm('Удалить этот материал?')) {
+        alert('Функция удаления материалов в разработке');
+    }
+}
+
+function formatLessonContent(text) {
+    // Простая обработка Markdown-подобного синтаксиса
+    let html = text
+        // Заголовки
+        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+        .replace(/^## (.*$)/gim, '<h2>$1</h2>')  
+        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+        // Жирный и курсив
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        // Код
+        .replace(/`([^`]*)`/g, '<code>$1</code>')
+        // Ссылки
+        .replace(/\[([^\]]*)\]\(([^)]*)\)/g, '<a href="$2" target="_blank">$1</a>')
+        // Переводы строк
+        .replace(/\n\n/g, '</p><p>')
+        .replace(/\n/g, '<br>');
+    
+    // Блоки кода
+    html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+    
+    // Списки
+    html = html.replace(/^\s*[-*+]\s+(.*$)/gim, '<li>$1</li>');
+    html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+    
+    html = html.replace(/^\s*\d+\.\s+(.*$)/gim, '<li>$1</li>'); 
+    html = html.replace(/(<li>.*<\/li>)/s, '<ol>$1</ol>');
+    
+    // Оборачиваем в параграфы если нужно
+    if (!html.startsWith('<')) {
+        html = '<p>' + html + '</p>';
+    }
+    
+    return html;
+}
+
+// Функции для управления блоками
+function moveBlockUp(blockId) {
+    const currentBlock = document.querySelector(`[data-block-id="${blockId}"]`);
+    const prevBlock = currentBlock.previousElementSibling;
+    
+    if (prevBlock && prevBlock.classList.contains('lesson-block')) {
+        currentBlock.parentNode.insertBefore(currentBlock, prevBlock);
+        updateBlockOrder();
+    }
+}
+
+function moveBlockDown(blockId) {
+    const currentBlock = document.querySelector(`[data-block-id="${blockId}"]`);
+    const nextBlock = currentBlock.nextElementSibling;
+    
+    if (nextBlock && nextBlock.classList.contains('lesson-block')) {
+        currentBlock.parentNode.insertBefore(nextBlock, currentBlock);
+        updateBlockOrder();
+    }
+}
+
+function updateBlockOrder() {
+    const blocks = document.querySelectorAll('.lesson-block[data-block-id]');
+    const blockIds = Array.from(blocks).map(block => block.dataset.blockId);
+    
+    fetch(`{{ url_for('reorder_blocks', lesson_id=lesson.id) }}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ block_ids: blockIds })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.success) {
+            alert('Ошибка при изменении порядка блоков');
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Ошибка при изменении порядка блоков');
+        location.reload();
+    });
+}
+
+
+
+function deleteMaterial(materialId) {
+    if (confirm('Удалить этот материал?')) {
+        alert('Функция удаления материалов будет реализована позже');
+    }
+}
+</script>
+{% endblock %}

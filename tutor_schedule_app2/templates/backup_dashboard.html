@@ -1,0 +1,374 @@
+{% extends "base.html" %}
+
+{% block title %}Резервное копирование - TutorApp{% endblock %}
+
+{% block content %}
+<div class="backup-header">
+    <h1>💾 Резервное копирование</h1>
+    <p>Создание и восстановление резервных копий данных</p>
+</div>
+
+<div class="backup-actions">
+    <div class="action-card create-backup">
+        <div class="action-icon">➕</div>
+        <div class="action-content">
+            <h3>Создать резервную копию</h3>
+            <p>Создает полную копию базы данных со всеми студентами, курсами и уроками</p>
+            <form method="POST" action="{{ url_for('create_backup') }}" 
+                  onsubmit="return confirm('Создать новую резервную копию?')">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    🗃️ Создать бэкап
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="action-card export-data">
+        <div class="action-icon">📊</div>
+        <div class="action-content">
+            <h3>Экспорт данных</h3>
+            <p>Экспорт данных в формате CSV для анализа или переноса</p>
+            <div class="export-buttons">
+                <a href="{{ url_for('export_students') }}" class="btn btn-secondary">
+                    👥 Экспорт студентов
+                </a>
+                <a href="{{ url_for('export_courses') }}" class="btn btn-secondary">
+                    🎓 Экспорт курсов
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if backup_files %}
+<div class="backup-files">
+    <h2>📁 Существующие резервные копии</h2>
+    
+    <div class="files-table-container">
+        <table class="files-table">
+            <thead>
+                <tr>
+                    <th>Имя файла</th>
+                    <th>Размер</th>
+                    <th>Дата создания</th>
+                    <th>Возраст</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for backup in backup_files %}
+                <tr>
+                    <td>
+                        <div class="file-info">
+                            <span class="file-icon">💾</span>
+                            <span class="file-name">{{ backup.filename }}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="file-size">{{ "%.1f"|format(backup.size / 1024 / 1024) }} МБ</span>
+                    </td>
+                    <td>
+                        <span class="file-date">{{ backup.date.strftime('%d.%m.%Y %H:%M') }}</span>
+                    </td>
+                    <td>
+                        <span class="file-age">
+                            {% set age_days = ((backup.date - backup.date).total_seconds() / 86400) | int %}
+                            {% if age_days == 0 %}
+                                Сегодня
+                            {% elif age_days == 1 %}
+                                Вчера
+                            {% else %}
+                                {{ age_days }} дн. назад
+                            {% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="file-actions">
+                            <form method="POST" 
+                                  action="{{ url_for('restore_backup', filename=backup.filename) }}" 
+                                  style="display: inline-block;"
+                                  onsubmit="return confirm('⚠️ ВНИМАНИЕ! Восстановление заменит все текущие данные. Текущая база будет сохранена как резервная копия. Продолжить?')">
+                                <button type="submit" class="btn btn-warning btn-sm">
+                                    🔄 Восстановить
+                                </button>
+                            </form>
+                            <a href="{{ backup.filepath }}" 
+                               download="{{ backup.filename }}" 
+                               class="btn btn-secondary btn-sm">
+                                ⬇️ Скачать
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="no-backups">
+    <div class="no-backups-icon">📁</div>
+    <h3>Нет резервных копий</h3>
+    <p>Создайте первую резервную копию для защиты ваших данных</p>
+</div>
+{% endif %}
+
+<div class="backup-info">
+    <h3>ℹ️ Информация о резервном копировании</h3>
+    <div class="info-grid">
+        <div class="info-item">
+            <div class="info-icon">🛡️</div>
+            <div class="info-content">
+                <h4>Безопасность</h4>
+                <p>Резервные копии включают всю базу данных: студентов, курсы, уроки, задания и прогресс</p>
+            </div>
+        </div>
+        
+        <div class="info-item">
+            <div class="info-icon">⚠️</div>
+            <div class="info-content">
+                <h4>Восстановление</h4>
+                <p>При восстановлении текущие данные будут заменены. Создается автоматическая копия текущей БД</p>
+            </div>
+        </div>
+        
+        <div class="info-item">
+            <div class="info-icon">💡</div>
+            <div class="info-content">
+                <h4>Рекомендации</h4>
+                <p>Создавайте резервные копии регулярно, особенно перед важными изменениями в системе</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.backup-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.backup-header h1 {
+    margin: 0 0 0.5rem 0;
+    color: var(--primary-color);
+}
+
+.backup-header p {
+    color: #666;
+    margin: 0;
+}
+
+.backup-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 2rem;
+    margin-bottom: 3rem;
+}
+
+.action-card {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    box-shadow: var(--shadow-md);
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+}
+
+.action-icon {
+    font-size: 3rem;
+    opacity: 0.8;
+}
+
+.action-content {
+    flex: 1;
+}
+
+.action-content h3 {
+    margin: 0 0 0.75rem 0;
+    color: #333;
+}
+
+.action-content p {
+    margin: 0 0 1.5rem 0;
+    color: #666;
+    line-height: 1.5;
+}
+
+.export-buttons {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.backup-files {
+    background: white;
+    border-radius: var(--radius);
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.backup-files h2 {
+    margin: 0 0 1.5rem 0;
+    color: var(--primary-color);
+}
+
+.files-table-container {
+    overflow-x: auto;
+}
+
+.files-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.files-table th,
+.files-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e1e5e9;
+}
+
+.files-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #333;
+}
+
+.file-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.file-icon {
+    font-size: 1.2rem;
+}
+
+.file-name {
+    font-weight: 600;
+    color: #333;
+}
+
+.file-size {
+    color: #666;
+    font-variant-numeric: tabular-nums;
+}
+
+.file-date {
+    color: #333;
+    font-variant-numeric: tabular-nums;
+}
+
+.file-age {
+    color: #666;
+    font-style: italic;
+}
+
+.file-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.no-backups {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #666;
+    background: white;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 2rem;
+}
+
+.no-backups-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.no-backups h3 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+}
+
+.no-backups p {
+    margin: 0;
+}
+
+.backup-info {
+    background: #f8f9fa;
+    border-radius: var(--radius);
+    padding: 2rem;
+    border-left: 4px solid var(--primary-color);
+}
+
+.backup-info h3 {
+    margin: 0 0 1.5rem 0;
+    color: var(--primary-color);
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.info-item {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.info-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+    margin-top: 0.25rem;
+}
+
+.info-content h4 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+}
+
+.info-content p {
+    margin: 0;
+    color: #666;
+    line-height: 1.5;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+    .backup-actions {
+        grid-template-columns: 1fr;
+    }
+    
+    .action-card {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .export-buttons {
+        justify-content: center;
+    }
+    
+    .files-table {
+        font-size: 0.9rem;
+    }
+    
+    .files-table th,
+    .files-table td {
+        padding: 0.75rem 0.5rem;
+    }
+    
+    .file-actions {
+        flex-direction: column;
+    }
+    
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}

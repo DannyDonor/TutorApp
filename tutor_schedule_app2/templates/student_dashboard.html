@@ -6,6 +6,11 @@
 <div class="card">
     <div class="card-header">
         <h2>Мои уроки</h2>
+        <div class="header-actions">
+            <a href="{{ url_for('student_settings') }}" class="btn btn-secondary">
+                ⚙️ Настройки
+            </a>
+        </div>
     </div>
     
     {% if lessons %}
@@ -57,4 +62,24 @@
     </div>
     {% endif %}
 </div>
+
+<style>
+.header-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.card-header h2 {
+    margin: 0;
+}
+</style>
 {% endblock %}

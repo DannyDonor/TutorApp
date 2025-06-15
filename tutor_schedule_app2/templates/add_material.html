@@ -1,0 +1,331 @@
+{% extends "base.html" %}
+
+{% block title %}Добавить материал - {{ lesson.title }} - TutorApp{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>📎 Добавить материал</h2>
+        <div class="breadcrumb">
+            <a href="{{ url_for('course_detail', course_id=course.id) }}">{{ course.title }}</a>
+            →
+            <a href="{{ url_for('lesson_detail', lesson_id=lesson.id) }}">{{ lesson.title }}</a>
+            →
+            <span>Новый материал</span>
+        </div>
+    </div>
+    
+    <form method="POST" class="auth-form">
+        <div class="form-group">
+            <label for="title">📌 Название материала *</label>
+            <input type="text" id="title" name="title" required
+                   placeholder="Например: Презентация по основам"
+                   maxlength="200">
+        </div>
+        
+        <div class="form-group">
+            <label for="url">🔗 Ссылка на материал *</label>
+            <input type="url" id="url" name="url" required
+                   placeholder="https://docs.google.com/presentation/d/..."
+                   onchange="detectMaterialType()">
+            <small class="form-text">Вставьте ссылку с открытым доступом</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="description">📝 Описание (необязательно)</label>
+            <textarea id="description" name="description" rows="3"
+                      placeholder="Краткое описание материала..."></textarea>
+        </div>
+        
+        <div class="material-type-info" id="material-type-info" style="display: none;">
+            <div class="type-indicator">
+                <span id="type-icon"></span>
+                <span id="type-text"></span>
+            </div>
+            <div class="preview-note" id="preview-note"></div>
+        </div>
+        
+        <div class="supported-services">
+            <h4>🌐 Поддерживаемые сервисы:</h4>
+            <div class="services-grid">
+                <div class="service-item">
+                    <div class="service-icon">📊</div>
+                    <div class="service-info">
+                        <h5>Google Презентации</h5>
+                        <p>docs.google.com/presentation</p>
+                        <small>Встраивается прямо в урок</small>
+                    </div>
+                </div>
+                
+                <div class="service-item">
+                    <div class="service-icon">📄</div>
+                    <div class="service-info">
+                        <h5>Google Документы</h5>
+                        <p>docs.google.com/document</p>
+                        <small>Встраивается для просмотра</small>
+                    </div>
+                </div>
+                
+                <div class="service-item">
+                    <div class="service-icon">🎥</div>
+                    <div class="service-info">
+                        <h5>YouTube</h5>
+                        <p>youtube.com / youtu.be</p>
+                        <small>Встраивается видеоплеер</small>
+                    </div>
+                </div>
+                
+                <div class="service-item">
+                    <div class="service-icon">💾</div>
+                    <div class="service-info">
+                        <h5>Google Диск</h5>
+                        <p>drive.google.com</p>
+                        <small>Ссылка для скачивания</small>
+                    </div>
+                </div>
+                
+                <div class="service-item">
+                    <div class="service-icon">📋</div>
+                    <div class="service-info">
+                        <h5>Google Таблицы</h5>
+                        <p>docs.google.com/spreadsheets</p>
+                        <small>Встраивается для просмотра</small>
+                    </div>
+                </div>
+                
+                <div class="service-item">
+                    <div class="service-icon">🔗</div>
+                    <div class="service-info">
+                        <h5>Любые ссылки</h5>
+                        <p>Любой веб-сайт</p>
+                        <small>Открывается в новой вкладке</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="tips-box">
+            <h4>💡 Советы по добавлению материалов:</h4>
+            <ul>
+                <li><strong>Для Google сервисов:</strong> включите "Доступ по ссылке" → "Просмотр"</li>
+                <li><strong>Для YouTube:</strong> можно использовать обычную ссылку на видео</li>
+                <li><strong>Для презентаций:</strong> добавьте "/embed" в конец ссылки для лучшего отображения</li>
+                <li><strong>Проверьте доступ:</strong> откройте ссылку в режиме инкогнито</li>
+            </ul>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+                ✅ Добавить материал
+            </button>
+            <a href="{{ url_for('lesson_detail', lesson_id=lesson.id) }}" class="btn btn-secondary">
+                ❌ Отмена
+            </a>
+        </div>
+    </form>
+</div>
+
+<style>
+.breadcrumb {
+    font-size: 0.9em;
+    color: #666;
+    margin-top: 0.5rem;
+}
+
+.breadcrumb a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+.material-type-info {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: var(--radius);
+    padding: 1rem;
+    margin: 1rem 0;
+}
+
+.type-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.type-indicator span:first-child {
+    font-size: 1.5rem;
+}
+
+.preview-note {
+    margin-top: 0.5rem;
+    font-size: 0.9em;
+    color: #666;
+}
+
+.supported-services {
+    background: linear-gradient(135deg, #f8f9ff, #e8f4fd);
+    border: 1px solid #c3d9ff;
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin: 2rem 0;
+}
+
+.supported-services h4 {
+    margin: 0 0 1.5rem 0;
+    color: var(--primary-color);
+}
+
+.services-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.service-item {
+    background: white;
+    border: 1px solid #e1e5e9;
+    border-radius: var(--radius-sm);
+    padding: 1rem;
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.service-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+    margin-top: 0.25rem;
+}
+
+.service-info h5 {
+    margin: 0 0 0.25rem 0;
+    color: #333;
+}
+
+.service-info p {
+    margin: 0 0 0.25rem 0;
+    font-family: monospace;
+    font-size: 0.85em;
+    color: #666;
+}
+
+.service-info small {
+    color: #888;
+    font-style: italic;
+}
+
+.tips-box {
+    background: linear-gradient(135deg, #fff4e6, #ffeaa7);
+    border: 1px solid #fdcb6e;
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin: 2rem 0;
+}
+
+.tips-box h4 {
+    margin: 0 0 1rem 0;
+    color: #e17055;
+}
+
+.tips-box ul {
+    margin: 0;
+    padding-left: 1.5rem;
+}
+
+.tips-box li {
+    margin-bottom: 0.75rem;
+    line-height: 1.5;
+}
+
+.tips-box strong {
+    color: #d63031;
+}
+
+.card-header h2 {
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    .services-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .service-item {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+</style>
+
+<script>
+function detectMaterialType() {
+    const urlInput = document.getElementById('url');
+    const typeInfo = document.getElementById('material-type-info');
+    const typeIcon = document.getElementById('type-icon');
+    const typeText = document.getElementById('type-text');
+    const previewNote = document.getElementById('preview-note');
+    
+    const url = urlInput.value.toLowerCase();
+    
+    if (!url) {
+        typeInfo.style.display = 'none';
+        return;
+    }
+    
+    let icon = '', text = '', note = '';
+    
+    if (url.includes('docs.google.com/presentation')) {
+        icon = '📊';
+        text = 'Google Презентация';
+        note = 'Будет встроена прямо в урок для удобного просмотра';
+    } else if (url.includes('docs.google.com/document')) {
+        icon = '📄';
+        text = 'Google Документ';
+        note = 'Будет доступен для просмотра в уроке';
+    } else if (url.includes('docs.google.com/spreadsheets')) {
+        icon = '📋';
+        text = 'Google Таблица';
+        note = 'Будет встроена для просмотра данных';
+    } else if (url.includes('drive.google.com')) {
+        icon = '💾';
+        text = 'Файл Google Диск';
+        note = 'Студенты смогут открыть файл в новой вкладке';
+    } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
+        icon = '🎥';
+        text = 'YouTube видео';
+        note = 'Видео будет встроено прямо в урок';
+    } else if (url.includes('vimeo.com')) {
+        icon = '🎥';
+        text = 'Vimeo видео';
+        note = 'Видео будет встроено в урок';
+    } else if (url.includes('.pdf')) {
+        icon = '📄';
+        text = 'PDF документ';
+        note = 'Откроется для скачивания или просмотра';
+    } else if (url.includes('.jpg') || url.includes('.png') || url.includes('.gif')) {
+        icon = '📸';
+        text = 'Изображение';
+        note = 'Будет показано прямо в уроке';
+    } else {
+        icon = '🔗';
+        text = 'Веб-ссылка';
+        note = 'Откроется в новой вкладке браузера';
+    }
+    
+    typeIcon.textContent = icon;
+    typeText.textContent = text;
+    previewNote.textContent = note;
+    typeInfo.style.display = 'block';
+}
+
+// Проверяем тип при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    detectMaterialType();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}Безопасность - TutorApp{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>🔒 Управление безопасностью</h2>
+        <p>Мониторинг активных сессий и управление доступом</p>
+    </div>
+    
+    <div class="security-stats">
+        <div class="stat-card">
+            <h3>{{ active_sessions|length }}</h3>
+            <span>Активных сессий</span>
+        </div>
+    </div>
+    
+    {% if active_sessions %}
+    <h3>🔐 Активные сессии</h3>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Пользователь</th>
+                <th>Роль</th>
+                <th>Email</th>
+                <th>Последняя активность</th>
+                <th>Действия</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in active_sessions %}
+            <tr>
+                <td>
+                    <strong>{{ user.username }}</strong>
+                    {% if not user.is_active %}
+                        <span class="status-badge status-cancelled">Деактивирован</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="role-badge role-{{ user.role }}">
+                        {% if user.role == 'admin' %}👑 Администратор
+                        {% elif user.role == 'tutor' %}👨‍🏫 Репетитор
+                        {% elif user.role == 'student' %}🎓 Студент
+                        {% else %}{{ user.role }}
+                        {% endif %}
+                    </span>
+                </td>
+                <td>{{ user.email }}</td>
+                <td>
+                    {% if user.reset_token %}
+                        <span class="status-badge status-active">Активна</span>
+                    {% else %}
+                        <span class="status-badge status-inactive">Неактивна</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if user.reset_token %}
+                    <form method="POST" action="{{ url_for('revoke_user_session', user_id=user.id) }}" 
+                          style="display: inline;"
+                          onsubmit="return confirm('Отозвать сессию пользователя {{ user.username }}?')">
+                        <button type="submit" class="btn btn-sm btn-warning">
+                            🚫 Отозвать сессию
+                        </button>
+                    </form>
+                    {% else %}
+                        <span class="text-muted">Нет активной сессии</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="alert alert-info">
+        <h3>Нет активных сессий</h3>
+        <p>В данный момент ни один пользователь не авторизован в системе.</p>
+    </div>
+    {% endif %}
+    
+    <div class="security-actions">
+        <h3>⚙️ Действия безопасности</h3>
+        <div class="action-buttons">
+            <button onclick="alert('Функция в разработке')" class="btn btn-secondary">
+                📊 Экспорт логов
+            </button>
+            <button onclick="alert('Функция в разработке')" class="btn btn-secondary">
+                🔄 Принудительный выход всех
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+.security-stats {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: linear-gradient(135deg, var(--primary-color), #667eea);
+    color: white;
+    padding: 1.5rem;
+    border-radius: var(--radius);
+    text-align: center;
+    min-width: 150px;
+}
+
+.stat-card h3 {
+    font-size: 2.5em;
+    margin: 0;
+    font-weight: bold;
+}
+
+.stat-card span {
+    font-size: 0.9em;
+    opacity: 0.9;
+}
+
+.role-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-weight: 500;
+}
+
+.role-admin {
+    background: #ffd700;
+    color: #8b4513;
+}
+
+.role-tutor {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+.role-student {
+    background: #e8f5e8;
+    color: #2e7d32;
+}
+
+.security-actions {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 2px solid #eee;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.status-active {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-inactive {
+    background: #f8d7da;
+    color: #721c24;
+}
+</style>
+{% endblock %}

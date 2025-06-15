@@ -20,10 +20,13 @@
             </button>
             <div class="navbar-nav" id="navbar-nav">
                 {% if session.role == 'admin' %}
+                    <a href="{{ url_for('admin_panel') }}" class="nav-link primary">🛠️ Админ-панель</a>
                     <a href="{{ url_for('today_lessons') }}" class="nav-link">📅 Сегодня</a>
                     <a href="{{ url_for('all_students') }}" class="nav-link">👥 Студенты</a>
                     <a href="{{ url_for('all_lessons') }}" class="nav-link">📚 Уроки</a>
                     <a href="{{ url_for('statistics') }}" class="nav-link">📈 Статистика</a>
+                    <a href="{{ url_for('analytics_dashboard') }}" class="nav-link">📊 Аналитика</a>
+                    <a href="{{ url_for('courses_list') }}" class="nav-link">🎓 Курсы</a>
                     <a href="{{ url_for('manage_users') }}" class="nav-link">⚙️ Пользователи</a>
                     <a href="{{ url_for('pending_approvals') }}" class="nav-link warning">⏳ Одобрения</a>
                 {% elif session.role == 'tutor' %}
@@ -36,9 +39,15 @@
                             <span class="notification-badge">{{ pending_homeworks_count }}</span>
                         {% endif %}
                     </a>
+                    <a href="{{ url_for('tutor_submissions') }}" class="nav-link">
+                        📝 Проверка заданий курсов
+                    </a>
                     <a href="{{ url_for('statistics') }}" class="nav-link">📈 Статистика</a>
+                    <a href="{{ url_for('analytics_dashboard') }}" class="nav-link">📊 Аналитика</a>
+                    <a href="{{ url_for('courses_list') }}" class="nav-link">🎓 Курсы</a>
                 {% elif session.role == 'student' %}
                     <a href="{{ url_for('student_dashboard') }}" class="nav-link">📖 Мои уроки</a>
+                    <a href="{{ url_for('student_courses') }}" class="nav-link">📚 Мои курсы</a>
                     <a href="{{ url_for('student_homework') }}" class="nav-link">📝 Домашние задания</a>
                 {% endif %}
             </div>
@@ -61,6 +70,7 @@
                     {% if session.role == 'admin' %}
                         <a href="{{ url_for('manage_users') }}" class="dropdown-item">👥 Пользователи</a>
                         <a href="{{ url_for('pending_approvals') }}" class="dropdown-item">⏳ Ожидают одобрения</a>
+                        <a href="{{ url_for('admin_security') }}" class="dropdown-item">🔒 Безопасность</a>
                     {% endif %}
                     <a href="{{ url_for('logout') }}" class="dropdown-item danger">🚪 Выйти</a>
                 </div>

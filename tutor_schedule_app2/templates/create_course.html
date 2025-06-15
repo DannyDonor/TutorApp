@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Создать курс - TutorApp{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>➕ Создать новый курс</h2>
+        <p>Создайте образовательный курс для своих студентов</p>
+    </div>
+    
+    <form method="POST" class="auth-form">
+        <div class="form-group">
+            <label for="title">📚 Название курса *</label>
+            <input type="text" id="title" name="title" required
+                   placeholder="Например: Основы программирования на Python"
+                   maxlength="200">
+            <small class="form-text">Краткое и понятное название вашего курса</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="description">📝 Описание курса</label>
+            <textarea id="description" name="description" rows="6"
+                      placeholder="Опишите, что изучат студенты в этом курсе, какие навыки получат, для кого подходит курс..."></textarea>
+            <small class="form-text">Подробное описание поможет студентам понять ценность курса</small>
+        </div>
+        
+        <div class="info-box">
+            <h4>💡 Что происходит после создания курса:</h4>
+            <ul>
+                <li>✅ Курс будет создан, но пока не активен</li>
+                <li>📚 Вы сможете добавить модули и уроки</li>
+                <li>📎 Загрузить материалы (презентации, видео, изображения)</li>
+                <li>📝 Создать задания для студентов</li>
+                <li>👥 Назначить курс выбранным студентам</li>
+            </ul>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+                ✅ Создать курс
+            </button>
+            <a href="{{ url_for('courses_list') }}" class="btn btn-secondary">
+                ❌ Отмена
+            </a>
+        </div>
+    </form>
+</div>
+
+<style>
+.info-box {
+    background: linear-gradient(135deg, #f8f9ff, #e8f2ff);
+    border: 1px solid #c3d9ff;
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin: 2rem 0;
+}
+
+.info-box h4 {
+    margin: 0 0 1rem 0;
+    color: var(--primary-color);
+}
+
+.info-box ul {
+    margin: 0;
+    padding-left: 1.5rem;
+}
+
+.info-box li {
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+}
+
+.form-group textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.card-header p {
+    margin: 0.5rem 0 0 0;
+    color: #666;
+}
+</style>
+{% endblock %}

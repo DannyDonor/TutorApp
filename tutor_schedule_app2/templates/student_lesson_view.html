@@ -1,0 +1,591 @@
+{% extends "base.html" %}
+
+{% block title %}{{ lesson.title }} - {{ course.title }} - TutorApp{% endblock %}
+
+{% block content %}
+<div class="lesson-header">
+    <div class="breadcrumb">
+        <a href="{{ url_for('student_courses') }}">📚 Мои курсы</a>
+        →
+        <a href="{{ url_for('student_course_detail', course_id=course.id) }}">{{ course.title }}</a>
+        →
+        <span>{{ lesson.title }}</span>
+    </div>
+    
+    <div class="lesson-info">
+        <h1>{{ lesson.title }}</h1>
+        <div class="lesson-meta">
+            <span>📚 Модуль: {{ lesson.module.title }}</span>
+            <span>👨‍🏫 {{ course.tutor.username }}</span>
+            {% if is_completed %}
+            <span class="status-badge completed">✅ Завершен</span>
+            {% elif lesson.id == enrollment.current_lesson_id %}
+            <span class="status-badge current">▶️ Текущий урок</span>
+            {% else %}
+            <span class="status-badge available">📖 Доступен</span>
+            {% endif %}
+        </div>
+        
+        {% if lesson.description %}
+        <p class="lesson-description">{{ lesson.description }}</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Содержание урока -->
+{% if blocks %}
+<div class="lesson-content">
+    <h3>📄 Содержание урока</h3>
+    
+    <div class="lesson-blocks">
+        {% for block in blocks %}
+        <div class="lesson-block {{ block.block_type }}">
+            {% if block.title %}
+            <h4 class="block-title">{{ block.title }}</h4>
+            {% endif %}
+            
+            <div class="block-content">
+                {% if block.block_type == 'text' %}
+                    {{ block.content | safe }}
+                {% elif block.block_type == 'video' %}
+                    <div class="video-container">
+                        {% if 'youtube.com' in block.content or 'youtu.be' in block.content %}
+                            {% set video_id = block.content.split('v=')[-1].split('&')[0] if 'v=' in block.content else block.content.split('/')[-1] %}
+                            <iframe src="https://www.youtube.com/embed/{{ video_id }}" 
+                                    frameborder="0" allowfullscreen></iframe>
+                        {% else %}
+                            <video controls>
+                                <source src="{{ block.content }}" type="video/mp4">
+                                Ваш браузер не поддерживает видео.
+                            </video>
+                        {% endif %}
+                    </div>
+                {% elif block.block_type == 'image' %}
+                    <div class="image-container">
+                        <img src="{{ block.content }}" alt="{{ block.title or 'Изображение' }}">
+                    </div>
+                {% elif block.block_type == 'material' and block.material_id %}
+                    <div class="material-block">
+                        <a href="{{ url_for('download_material', material_id=block.material_id) }}" 
+                           class="material-link">
+                            📎 Скачать материал
+                        </a>
+                    </div>
+                {% else %}
+                    {{ block.content | safe }}
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Задания -->
+{% if assignments %}
+<div class="assignments-section">
+    <h3>📝 Задания урока</h3>
+    
+    <div class="assignments-list">
+        {% for assignment in assignments %}
+        <div class="assignment-card">
+            <div class="assignment-header">
+                <h4>{{ assignment.title }}</h4>
+                <div class="assignment-status">
+                    {% set submission = submissions.get(assignment.id) %}
+                    {% if submission %}
+                        {% if submission.is_approved() %}
+                            <span class="status-badge approved">✅ Одобрено</span>
+                            {% if submission.points is not none %}
+                            <span class="points-badge">{{ submission.points }} баллов</span>
+                            {% endif %}
+                        {% elif submission.is_rejected() %}
+                            <span class="status-badge rejected">❌ Отклонено</span>
+                        {% else %}
+                            <span class="status-badge submitted">📝 На проверке</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="status-badge not-submitted">❌ Не выполнено</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="assignment-description">
+                {{ assignment.description | safe }}
+            </div>
+            
+            {% set submission = submissions.get(assignment.id) %}
+            
+            {% if submission and submission.is_approved() %}
+            <!-- Одобренное задание - только просмотр -->
+            <div class="submission-view approved">
+                <h5>Ваш ответ (одобрен):</h5>
+                <div class="submitted-content">{{ submission.content }}</div>
+                
+                {% if submission.tutor_feedback %}
+                <div class="tutor-feedback">
+                    <h5>Комментарий репетитора:</h5>
+                    <div class="feedback-content">{{ submission.tutor_feedback }}</div>
+                </div>
+                {% endif %}
+            </div>
+            {% elif submission and submission.is_rejected() %}
+            <!-- Отклоненное задание - можно переделать -->
+            <div class="submission-view rejected">
+                <h5>Ваш предыдущий ответ (отклонен):</h5>
+                <div class="submitted-content rejected">{{ submission.content }}</div>
+                
+                {% if submission.tutor_feedback %}
+                <div class="tutor-feedback rejected">
+                    <h5>Комментарий репетитора:</h5>
+                    <div class="feedback-content">{{ submission.tutor_feedback }}</div>
+                </div>
+                {% endif %}
+                
+                <div class="rejection-notice">
+                    <strong>⚠️ Задание отклонено.</strong> Исправьте ошибки согласно комментарию репетитора и отправьте заново.
+                </div>
+            </div>
+            
+            <!-- Форма для повторной отправки -->
+            <form method="POST" action="{{ url_for('student_submit_assignment', lesson_id=lesson.id) }}" 
+                  class="assignment-form">
+                <input type="hidden" name="assignment_id" value="{{ assignment.id }}">
+                
+                <div class="form-group">
+                    <label for="content_{{ assignment.id }}">Исправленный ответ:</label>
+                    <textarea name="content" 
+                              id="content_{{ assignment.id }}" 
+                              class="form-control"
+                              rows="5" 
+                              placeholder="Введите исправленный ответ..."
+                              required></textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    🔄 Отправить исправленный ответ
+                </button>
+            </form>
+            {% else %}
+            <!-- Форма для первой отправки или обновления неproверенного ответа -->
+            <form method="POST" action="{{ url_for('student_submit_assignment', lesson_id=lesson.id) }}" 
+                  class="assignment-form">
+                <input type="hidden" name="assignment_id" value="{{ assignment.id }}">
+                
+                <div class="form-group">
+                    <label for="content_{{ assignment.id }}">Ваш ответ:</label>
+                    <textarea name="content" 
+                              id="content_{{ assignment.id }}" 
+                              class="form-control"
+                              rows="5" 
+                              placeholder="Введите ваш ответ..."
+                              required>{{ submission.content if submission else '' }}</textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    {% if submission %}
+                        📝 Обновить ответ
+                    {% else %}
+                        ➤ Отправить ответ
+                    {% endif %}
+                </button>
+            </form>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Завершение урока -->
+{% if not is_completed %}
+<div class="lesson-completion">
+    {% if can_complete %}
+    <div class="completion-ready">
+        <h3>✅ Урок готов к завершению</h3>
+        <p>Вы выполнили все задания этого урока. Нажмите кнопку ниже, чтобы завершить урок и открыть доступ к следующему.</p>
+        
+        <form method="POST" action="{{ url_for('student_complete_lesson', lesson_id=lesson.id) }}" 
+              onsubmit="return confirm('Завершить урок? После этого откроется доступ к следующему уроку.')">
+            <button type="submit" class="btn btn-success btn-lg">
+                🎯 Завершить урок
+            </button>
+        </form>
+    </div>
+    {% else %}
+    <div class="completion-pending">
+        <h3>📋 Для завершения урока необходимо:</h3>
+        <ul>
+            {% if assignments %}
+            <li>Выполнить все задания урока</li>
+            <li>Дождаться проверки репетитором</li>
+            {% else %}
+            <li>Изучить весь материал урока</li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+{% else %}
+<div class="lesson-completed">
+    <h3>🎉 Урок завершен!</h3>
+    <p>Поздравляем! Вы успешно завершили этот урок.</p>
+</div>
+{% endif %}
+
+<div class="actions-panel">
+    <a href="{{ url_for('student_course_detail', course_id=course.id) }}" class="btn btn-secondary">
+        🔙 К курсу
+    </a>
+    <a href="{{ url_for('student_courses') }}" class="btn btn-outline">
+        📚 Мои курсы
+    </a>
+</div>
+
+<style>
+.lesson-header {
+    margin-bottom: 2rem;
+}
+
+.breadcrumb {
+    font-size: 0.9em;
+    color: #666;
+    margin-bottom: 1rem;
+}
+
+.breadcrumb a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+.lesson-info h1 {
+    margin: 0 0 1rem 0;
+    color: var(--primary-color);
+}
+
+.lesson-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.9em;
+    color: #666;
+}
+
+.lesson-description {
+    color: #666;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.status-badge.completed {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-badge.current {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-badge.available {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.status-badge.checked {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-badge.submitted {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.status-badge.not-submitted {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.points-badge {
+    background: var(--primary-color);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: bold;
+}
+
+.lesson-content, .assignments-section, .lesson-completion {
+    background: white;
+    border: 1px solid #e1e5e9;
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.lesson-content h3, .assignments-section h3, .lesson-completion h3 {
+    margin: 0 0 1.5rem 0;
+    color: var(--primary-color);
+}
+
+.lesson-blocks {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.lesson-block {
+    padding: 1.5rem;
+    border: 1px solid #e1e5e9;
+    border-radius: var(--radius-sm);
+    background: #fafbfc;
+}
+
+.lesson-block.text {
+    background: white;
+}
+
+.lesson-block.video {
+    background: #f8f9fa;
+}
+
+.lesson-block.image {
+    background: #f8f9fa;
+}
+
+.block-title {
+    margin: 0 0 1rem 0;
+    color: #333;
+}
+
+.block-content {
+    line-height: 1.6;
+}
+
+.video-container {
+    position: relative;
+    width: 100%;
+    height: 0;
+    padding-bottom: 56.25%; /* 16:9 aspect ratio */
+}
+
+.video-container iframe,
+.video-container video {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: var(--radius-sm);
+}
+
+.image-container img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius-sm);
+}
+
+.material-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: var(--primary-color);
+    color: white;
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+    font-weight: 500;
+}
+
+.material-link:hover {
+    background: var(--primary-dark);
+    color: white;
+    text-decoration: none;
+}
+
+.assignments-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.assignment-card {
+    border: 1px solid #e1e5e9;
+    border-radius: var(--radius-sm);
+    padding: 1.5rem;
+    background: white;
+}
+
+.assignment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    gap: 1rem;
+}
+
+.assignment-header h4 {
+    margin: 0;
+    color: #333;
+}
+
+.assignment-status {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.assignment-description {
+    color: #666;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+}
+
+.submission-view {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: var(--radius-sm);
+    margin-top: 1rem;
+}
+
+.submission-view h5 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+}
+
+.submitted-content {
+    background: white;
+    padding: 1rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid #e1e5e9;
+    white-space: pre-wrap;
+    margin-bottom: 1rem;
+}
+
+.tutor-feedback {
+    margin-top: 1rem;
+}
+
+.feedback-content {
+    background: #e3f2fd;
+    padding: 1rem;
+    border-radius: var(--radius-sm);
+    border-left: 4px solid var(--primary-color);
+    white-space: pre-wrap;
+}
+
+.assignment-form {
+    margin-top: 1rem;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #333;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: var(--radius-sm);
+    font-size: 1rem;
+    font-family: inherit;
+    resize: vertical;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+}
+
+.completion-ready {
+    text-align: center;
+    padding: 2rem;
+    background: #f0f9ff;
+    border-radius: var(--radius-sm);
+}
+
+.completion-ready h3 {
+    color: var(--success-color);
+    margin-bottom: 1rem;
+}
+
+.completion-pending {
+    padding: 1.5rem;
+    background: #fff7ed;
+    border-radius: var(--radius-sm);
+}
+
+.completion-pending h3 {
+    color: var(--warning-color);
+    margin-bottom: 1rem;
+}
+
+.completion-pending ul {
+    margin: 0;
+    padding-left: 1.5rem;
+    color: #666;
+}
+
+.lesson-completed {
+    text-align: center;
+    padding: 2rem;
+    background: #f0f9ff;
+    border-radius: var(--radius-sm);
+}
+
+.lesson-completed h3 {
+    color: var(--success-color);
+    margin-bottom: 1rem;
+}
+
+.actions-panel {
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    padding-top: 2rem;
+    border-top: 2px solid #eee;
+}
+
+@media (max-width: 768px) {
+    .lesson-meta {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .assignment-header {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .assignment-status {
+        justify-content: flex-start;
+    }
+    
+    .actions-panel {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}

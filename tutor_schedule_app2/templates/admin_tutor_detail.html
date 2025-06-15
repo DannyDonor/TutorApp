@@ -1,0 +1,557 @@
+{% extends "base.html" %}
+
+{% block title %}{{ tutor.username }} - Управление репетиторами - TutorApp{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="breadcrumb">
+        <a href="{{ url_for('admin_panel') }}">🛠️ Админ-панель</a>
+        →
+        <a href="{{ url_for('admin_tutors') }}">Репетиторы</a>
+        →
+        <span>{{ tutor.username }}</span>
+    </div>
+    
+    <div class="tutor-header">
+        <div class="tutor-info">
+            <div class="tutor-avatar">
+                {{ tutor.username[0].upper() }}
+            </div>
+            <div class="tutor-details">
+                <h1>{{ tutor.username }}</h1>
+                <div class="tutor-meta">
+                    <span>📧 {{ tutor.email }}</span>
+                    <span>📅 Регистрация: {{ tutor.created_at.strftime('%d.%m.%Y %H:%M') if tutor.created_at else 'Неизвестно' }}</span>
+                </div>
+                <div class="tutor-status">
+                    {% if tutor.is_approved %}
+                        <span class="status-badge approved">✅ Одобрен</span>
+                    {% else %}
+                        <span class="status-badge pending">⏳ Ожидает одобрения</span>
+                    {% endif %}
+                    
+                    {% if tutor.is_active %}
+                        <span class="status-badge active">🟢 Активен</span>
+                    {% else %}
+                        <span class="status-badge inactive">🔴 Заблокирован</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="tutor-actions">
+            <form method="POST" action="{{ url_for('admin_toggle_tutor', tutor_id=tutor.id) }}" 
+                  style="display: inline;">
+                <button type="submit" class="btn btn-primary">
+                    {% if tutor.is_approved %}
+                        🚫 Заблокировать
+                    {% else %}
+                        ✅ Одобрить
+                    {% endif %}
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Статистика -->
+<div class="stats-section">
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">{{ students|length }}</div>
+            <div class="stat-label">Студентов</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ courses_data|length }}</div>
+            <div class="stat-label">Курсов</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ recent_lessons|length }}</div>
+            <div class="stat-label">Недавних уроков</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">
+                {% set total_enrollments = 0 %}
+                {% for item in courses_data %}
+                    {% set total_enrollments = total_enrollments + item.enrollments|length %}
+                {% endfor %}
+                {{ total_enrollments }}
+            </div>
+            <div class="stat-label">Записей на курсы</div>
+        </div>
+    </div>
+</div>
+
+<!-- Курсы -->
+<div class="courses-section">
+    <h3>📚 Курсы репетитора</h3>
+    {% if courses_data %}
+    <div class="courses-list">
+        {% for item in courses_data %}
+        <div class="course-card">
+            <div class="course-info">
+                <h4>
+                    <a href="{{ url_for('course_detail', course_id=item.course.id) }}">
+                        {{ item.course.title }}
+                    </a>
+                </h4>
+                <p class="course-description">{{ item.course.description[:100] }}{% if item.course.description|length > 100 %}...{% endif %}</p>
+                <div class="course-meta">
+                    <span>📅 Создан: {{ item.course.created_at.strftime('%d.%m.%Y') }}</span>
+                    <span>📚 Модулей: {{ item.modules_count }}</span>
+                    <span>📖 Уроков: {{ item.lessons_count }}</span>
+                </div>
+            </div>
+            
+            <div class="course-stats">
+                <div class="course-status">
+                    {% if item.course.is_published %}
+                        <span class="status-badge published">🌐 Опубликован</span>
+                    {% else %}
+                        <span class="status-badge draft">📝 Черновик</span>
+                    {% endif %}
+                </div>
+                
+                <div class="enrollments-info">
+                    <strong>👥 Студентов: {{ item.enrollments|length }}</strong>
+                    {% if item.enrollments %}
+                    <div class="students-list">
+                        {% for enrollment in item.enrollments[:3] %}
+                        <span class="student-tag">{{ enrollment.student.full_name }}</span>
+                        {% endfor %}
+                        {% if item.enrollments|length > 3 %}
+                        <span class="more-students">+{{ item.enrollments|length - 3 }} еще</span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">📚</div>
+        <p>Репетитор пока не создал курсов</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Студенты -->
+<div class="students-section">
+    <h3>🎓 Студенты репетитора</h3>
+    {% if students %}
+    <div class="students-grid">
+        {% for student in students %}
+        <div class="student-card">
+            <div class="student-avatar">
+                {{ student.full_name[0].upper() }}
+            </div>
+            <div class="student-info">
+                <h4>{{ student.full_name }}</h4>
+                <div class="student-meta">
+                    <span>📚 Уроков: {{ student.lessons_count or 0 }}</span>
+                    {% if student.telegram_chat_id %}
+                    <span>💬 Telegram: {{ student.telegram_chat_id }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">🎓</div>
+        <p>У репетитора пока нет студентов</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Последние уроки -->
+<div class="lessons-section">
+    <h3>📖 Последние уроки</h3>
+    {% if recent_lessons %}
+    <div class="lessons-list">
+        {% for lesson in recent_lessons %}
+        <div class="lesson-item">
+            <div class="lesson-info">
+                <div class="lesson-title">
+                    {{ lesson.student.full_name }}
+                </div>
+                <div class="lesson-meta">
+                    📅 {{ lesson.date_time.strftime('%d.%m.%Y %H:%M') }}
+                    • Статус: {{ lesson.status }}
+                    {% if lesson.topic_covered %}
+                    • Тема: {{ lesson.topic_covered }}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">📖</div>
+        <p>Нет недавних уроков</p>
+    </div>
+    {% endif %}
+</div>
+
+<div class="actions-panel">
+    <a href="{{ url_for('admin_tutors') }}" class="btn btn-secondary">
+        🔙 К списку репетиторов
+    </a>
+    <a href="{{ url_for('admin_panel') }}" class="btn btn-outline">
+        🛠️ Админ-панель
+    </a>
+</div>
+
+<style>
+.page-header {
+    margin-bottom: 2rem;
+}
+
+.breadcrumb {
+    font-size: 0.9em;
+    color: #666;
+    margin-bottom: 1rem;
+}
+
+.breadcrumb a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+.tutor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    border: 1px solid #e1e5e9;
+    border-radius: var(--radius);
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.tutor-info {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.tutor-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 2rem;
+}
+
+.tutor-details h1 {
+    margin: 0 0 0.5rem 0;
+    color: var(--primary-color);
+}
+
+.tutor-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    font-size: 0.9em;
+    color: #666;
+    margin-bottom: 1rem;
+}
+
+.tutor-status {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.status-badge.approved {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-badge.pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-badge.active {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.status-badge.inactive {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.status-badge.published {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.status-badge.draft {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.stats-section {
+    margin-bottom: 3rem;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.stat-card {
+    background: white;
+    border: 1px solid #e1e5e9;
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.stat-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: var(--primary-color);
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    color: #666;
+    font-weight: 500;
+}
+
+.courses-section, .students-section, .lessons-section {
+    background: white;
+    border: 1px solid #e1e5e9;
+    border-radius: var(--radius);
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.courses-section h3, .students-section h3, .lessons-section h3 {
+    margin: 0 0 1.5rem 0;
+    color: var(--primary-color);
+}
+
+.courses-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.course-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-radius: var(--radius-sm);
+    border-left: 4px solid var(--primary-color);
+}
+
+.course-info {
+    flex: 1;
+}
+
+.course-info h4 {
+    margin: 0 0 0.5rem 0;
+}
+
+.course-info h4 a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.course-info h4 a:hover {
+    text-decoration: underline;
+}
+
+.course-description {
+    color: #666;
+    margin-bottom: 1rem;
+    line-height: 1.4;
+}
+
+.course-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    font-size: 0.9em;
+    color: #666;
+}
+
+.course-stats {
+    text-align: right;
+    min-width: 200px;
+}
+
+.course-status {
+    margin-bottom: 1rem;
+}
+
+.enrollments-info strong {
+    color: #333;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.students-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.student-tag {
+    background: #e9ecef;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.8em;
+    color: #495057;
+}
+
+.more-students {
+    background: var(--primary-color);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.8em;
+}
+
+.students-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.student-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: var(--radius-sm);
+}
+
+.student-card .student-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.student-info h4 {
+    margin: 0 0 0.25rem 0;
+    color: #333;
+}
+
+.student-meta {
+    font-size: 0.9em;
+    color: #666;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.lessons-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.lesson-item {
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: var(--radius-sm);
+    border-left: 3px solid var(--primary-color);
+}
+
+.lesson-title {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.25rem;
+}
+
+.lesson-meta {
+    font-size: 0.9em;
+    color: #666;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+}
+
+.empty-icon {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+}
+
+.actions-panel {
+    display: flex;
+    gap: 1rem;
+    padding-top: 2rem;
+    border-top: 2px solid #eee;
+}
+
+@media (max-width: 768px) {
+    .tutor-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1.5rem;
+    }
+    
+    .tutor-info {
+        justify-content: center;
+        text-align: center;
+    }
+    
+    .course-card {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .course-stats {
+        text-align: left;
+    }
+    
+    .students-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .actions-panel {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}

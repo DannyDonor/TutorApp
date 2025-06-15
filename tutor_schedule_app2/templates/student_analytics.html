@@ -1,0 +1,337 @@
+{% extends "base.html" %}
+
+{% block title %}Аналитика студентов - TutorApp{% endblock %}
+
+{% block content %}
+<div class="analytics-header">
+    <h1>👥 Аналитика студентов</h1>
+    <p>Детальная статистика прогресса и успеваемости</p>
+</div>
+
+<div class="analytics-controls">
+    <a href="{{ url_for('analytics_dashboard') }}" class="btn btn-secondary">
+        🔙 К общей аналитике
+    </a>
+</div>
+
+<div class="students-analytics">
+    {% if student_analytics %}
+    <div class="analytics-table-container">
+        <table class="analytics-table">
+            <thead>
+                <tr>
+                    <th>Студент</th>
+                    <th>Курсы</th>
+                    <th>Прогресс</th>
+                    <th>Задания</th>
+                    <th>Успеваемость</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for data in student_analytics %}
+                <tr>
+                    <td>
+                        <div class="student-info">
+                            <div class="student-name">{{ data.student.full_name }}</div>
+                            <div class="student-email">{{ data.student.email or 'Нет email' }}</div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="courses-stats">
+                            <div class="stat-item">
+                                <span class="stat-number">{{ data.total_courses }}</span>
+                                <span class="stat-label">всего</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number completed">{{ data.completed_courses }}</span>
+                                <span class="stat-label">завершено</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number in-progress">{{ data.in_progress_courses }}</span>
+                                <span class="stat-label">в процессе</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="progress-info">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: {{ data.avg_progress }}%"></div>
+                            </div>
+                            <div class="progress-text">{{ "%.1f"|format(data.avg_progress) }}%</div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="assignments-stats">
+                            <div class="assignment-stat approved">
+                                <span class="stat-icon">✅</span>
+                                <span class="stat-count">{{ data.approved_submissions }}</span>
+                            </div>
+                            <div class="assignment-stat rejected">
+                                <span class="stat-icon">❌</span>
+                                <span class="stat-count">{{ data.rejected_submissions }}</span>
+                            </div>
+                            <div class="assignment-stat total">
+                                <span class="stat-icon">📝</span>
+                                <span class="stat-count">{{ data.total_submissions }}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="success-rate">
+                            {% if data.total_submissions > 0 %}
+                            <div class="success-circle {% if data.success_rate >= 80 %}excellent{% elif data.success_rate >= 60 %}good{% else %}needs-improvement{% endif %}">
+                                {{ "%.0f"|format(data.success_rate) }}%
+                            </div>
+                            {% else %}
+                            <div class="success-circle no-data">—</div>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('detailed_student_analytics', student_id=data.student.id) }}" 
+                           class="btn btn-sm btn-primary">
+                            📊 Подробно
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">👥</div>
+        <h3>Нет студентов</h3>
+        <p>Студенты появятся здесь после записи на курсы</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.analytics-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.analytics-header h1 {
+    margin: 0 0 0.5rem 0;
+    color: var(--primary-color);
+}
+
+.analytics-header p {
+    color: #666;
+    margin: 0;
+}
+
+.analytics-controls {
+    margin-bottom: 2rem;
+}
+
+.students-analytics {
+    background: white;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.analytics-table-container {
+    overflow-x: auto;
+}
+
+.analytics-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.analytics-table th,
+.analytics-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e1e5e9;
+}
+
+.analytics-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #333;
+}
+
+.student-info {
+    min-width: 150px;
+}
+
+.student-name {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.25rem;
+}
+
+.student-email {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.courses-stats {
+    display: flex;
+    gap: 1rem;
+    min-width: 200px;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.stat-number {
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.stat-number.completed {
+    color: var(--success-color);
+}
+
+.stat-number.in-progress {
+    color: var(--warning-color);
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.progress-info {
+    min-width: 120px;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #e1e5e9;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+    transition: width 0.3s;
+}
+
+.progress-text {
+    text-align: center;
+    font-weight: 600;
+    color: #333;
+}
+
+.assignments-stats {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    min-width: 120px;
+}
+
+.assignment-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.assignment-stat.approved .stat-icon {
+    color: var(--success-color);
+}
+
+.assignment-stat.rejected .stat-icon {
+    color: var(--danger-color);
+}
+
+.assignment-stat.total .stat-icon {
+    color: #666;
+}
+
+.stat-count {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.success-rate {
+    min-width: 80px;
+    display: flex;
+    justify-content: center;
+}
+
+.success-circle {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.9rem;
+    color: white;
+}
+
+.success-circle.excellent {
+    background: var(--success-color);
+}
+
+.success-circle.good {
+    background: var(--warning-color);
+}
+
+.success-circle.needs-improvement {
+    background: var(--danger-color);
+}
+
+.success-circle.no-data {
+    background: #ccc;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #666;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-state h3 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+}
+
+.empty-state p {
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    .analytics-table {
+        font-size: 0.9rem;
+    }
+    
+    .analytics-table th,
+    .analytics-table td {
+        padding: 0.75rem 0.5rem;
+    }
+    
+    .courses-stats {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .assignments-stats {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
+</style>
+{% endblock %}
